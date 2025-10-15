@@ -43,21 +43,9 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
    cd custom-mcp-servers
    ```
 
-2. **Install dependencies per server.** Each server is an independent Node project.
-   ```bash
-   for dir in archive-mcp browser-mcp curl dice-roll easy-view file-download json-mcp markdown-mcp osrs-lookup time; do
-     (cd "$dir" && npm install)
-   done
-   ```
-   Rerun the loop whenever `package.json` files change.
+2. **Install dependencies.** Run `npm install` inside each server the first time you clone the repo and whenever that server’s `package.json` changes.
 
-3. **Build the TypeScript once per server.**
-   ```bash
-   for dir in archive-mcp browser-mcp curl dice-roll easy-view file-download json-mcp markdown-mcp osrs-lookup time; do
-     (cd "$dir" && npm run build)
-   done
-   ```
-   Each build emits `dist/server.js`, which is the entry point you register with MCP clients.
+3. **Build the TypeScript output.** From the server directory, run `npm run build` before you register it with an MCP client; this generates the `dist/server.js` entry point.
 
 4. **Run a server locally (manual verification).**
    ```powershell
