@@ -16,6 +16,7 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
   - [file-download - Persistent Download Sink](#file-download--persistent-download-sink)
   - [ffmpeg-mcp - Media Processing Toolkit](#ffmpeg-mcp--media-processing-toolkit)
   - [html-mcp - HTML Parsing Toolkit](#html-mcp--html-parsing-toolkit)
+  - [imagemagick-mcp - Image Processing Toolkit](#imagemagick-mcp--image-processing-toolkit)
   - [json-mcp - Structured Data Toolkit](#json-mcp--structured-data-toolkit)
   - [markdown-mcp - Markdown Utilities](#markdown-mcp--markdown-utilities)
   - [osrs-lookup - Old School RuneScape Lookup](#osrs-lookup--old-school-runescape-lookup)
@@ -27,7 +28,7 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 
 ## Overview
 - Each server is self-contained (its own `package.json`, `src`, and compiled `dist` output) so you can build, deploy, or version them independently.
-- Tooling covers HTTP inspection, browser automation, archive management, FFmpeg-powered media editing, large-scale media downloading via yt-dlp, dice rolling, read-only codebase exploration, controlled file download management, structured data conversions (JSON/YAML/XML), Markdown analysis, Old School RuneScape data lookups, and timezone utilities.
+- Tooling covers HTTP inspection, browser automation, archive management, FFmpeg-powered media editing, ImageMagick-powered image processing, large-scale media downloading via yt-dlp, dice rolling, read-only codebase exploration, controlled file download management, structured data conversions (JSON/YAML/XML), Markdown analysis, Old School RuneScape data lookups, and timezone utilities.
 - All servers log operational details to stderr to keep stdout clean for MCP responses.
 - Distributed under the MIT license for unrestricted commercial and personal use.
 
@@ -107,6 +108,10 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/html-mcp/src/server.js"]
        },
+       "imagemagick-mcp": {
+         "command": "node",
+         "args": ["/your/path/to/custom-mcp-servers/imagemagick-mcp/src/server.js"]
+       },
        "json-mcp": {
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/json-mcp/src/server.js"]
@@ -129,7 +134,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
    - Use forward slashes in JSON to avoid escaping backslashes.
    - Ensure the working directory matches the project root so relative paths (for example, the easy-view index) resolve correctly.
 3. **Restart the client** so it reloads the MCP configuration.
-4. **Invoke tools by name** inside your client (`navigate`, `create_zip`, `convert_video`, `download_video`, `parse_html`, `curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `format_json`, `markdown_to_html`, `get_current_time`, etc.). The server responses appear in the assistant panel.
+4. **Invoke tools by name** inside your client (`navigate`, `create_zip`, `convert_video`, `download_video`, `parse_html`, `resize_image`, `curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `format_json`, `markdown_to_html`, `get_current_time`, etc.). The server responses appear in the assistant panel.
 
 ## Server Reference
 
@@ -297,7 +302,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
 | `extract_frames` | Export still frames to an image sequence. | `inputPath`, `outputDir` | `format`, `fps`, `startTime`, `duration` |
 | `create_gif` | Generate an animated GIF with palette optimisation. | `inputPath`, `outputPath` | `startTime`, `duration`, `fps`, `width` |
 | `add_watermark` | Overlay an image watermark. | `inputPath`, `watermarkPath`, `outputPath` | `position`, `opacity`, `offsetX`, `offsetY` |
-| `adjust_speed` | Change playback speed (0.1x–4x). | `inputPath`, `outputPath`, `speed` | None |
+| `adjust_speed` | Change playback speed (0.1x-4x). | `inputPath`, `outputPath`, `speed` | None |
 | `rotate_video` | Rotate or flip footage. | `inputPath`, `outputPath`, `mode` | None |
 | `add_subtitles` | Burn-in or embed subtitle files. | `inputPath`, `subtitlePath`, `outputPath` | `burnIn` |
 | `batch_convert` | Convert multiple files in one request. | `inputPaths` (JSON array), `outputDir` | `outputFormat`, `quality`, `extraArgs` |
@@ -332,6 +337,68 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - Keep `yt-dlp` updated (`yt-dlp -U`) to maintain compatibility with streaming sites.
 - Use playlist/channel limits to avoid large unattended downloads.
 - Escape Windows paths (`C:\\Videos\\Downloads`) when passing JSON arguments from MCP clients.
+
+### html-mcp - HTML Parsing Toolkit
+- **Path:** `html-mcp/`
+- **Purpose:** Parse, inspect, and manipulate HTML documents using Cheerio and jsdom.
+- **Key behaviours:**
+  - Accepts either raw HTML strings or file paths (`type: "content"`/`"file"`) for flexible inputs.
+  - Provides selector-based extraction, metadata scraping, form/table inspection, and validation helpers.
+  - Supports mutating operations (remove, replace, minify, prettify) with optional file writes.
+
+| Tool | Purpose | Required arguments | Optional arguments / defaults |
+| ---- | ------- | ------------------ | ----------------------------- |
+| `parse_html` | Summarise document structure. | `htmlContent` (string) | `type` (`content`/`file`) |
+| `select_elements` | Return nodes matching a CSS selector. | `htmlContent` (string), `selector` (string) | `selectorType` (`css`), `type` |
+| `extract_text` | Extract clean text from the document. | `htmlContent` (string) | `selector`, `includeTags` (`false`), `preserveWhitespace` (`false`), `type` |
+| `extract_links` | List links with basic classification. | `htmlContent` (string) | `includeInternal` (`true`), `includeExternal` (`true`), `selector`, `type` |
+| `extract_images` | Gather image metadata. | `htmlContent` (string) | `includeBase64` (`false`), `selector`, `type` |
+| `get_attributes` | Fetch attribute values from elements. | `htmlContent` (string), `selector` (string), `attributes` (JSON array) | `type` |
+| `validate_html` | Flag structural issues. | `htmlContent` (string) | `type` |
+| `minify_html` | Produce compact markup. | `htmlContent` (string) | `savePath`, `type` |
+| `prettify_html` | Reformat with indentation. | `htmlContent` (string) | `savePath`, `type` |
+| `remove_elements` | Delete nodes matching a selector. | `htmlContent` (string), `selector` (string) | `type` |
+| `replace_content` | Replace inner text/HTML. | `htmlContent` (string), `selector` (string), `replacement` (string) | `type`, `mode` (`text`/`html`) |
+| `extract_metadata` | Return SEO/meta tags. | `htmlContent` (string) | `type` |
+| `extract_tables` | Convert tables to structured data. | `htmlContent` (string) | `selector`, `type`, `firstRowHeaders` (`true`) |
+| `extract_forms` | Inspect forms and fields. | `htmlContent` (string) | `selector`, `type` |
+| `extract_headings` | Build a heading outline. | `htmlContent` (string) | `type` |
+
+**Usage tips**
+- Provide absolute paths when using `type: "file"` so the server can locate the HTML on disk.
+- CSS selectors are supported; XPath requests currently throw a validation error.
+- Capture the returned HTML or supply `savePath` when mutating content to persist changes.
+
+### imagemagick-mcp - Image Processing Toolkit
+- **Path:** `imagemagick-mcp/`
+- **Purpose:** Perform image analysis, transformation, and enhancement using ImageMagick CLI tools.
+- **Key behaviours:**
+  - Verifies ImageMagick availability before each call and surfaces CLI errors verbatim.
+  - Creates output directories on demand and reports generated filenames and size deltas.
+  - Supports resizing, cropping, rotation, flipping, format conversion, watermarking, quality tweaks, and batch workflows.
+
+| Tool | Purpose | Required arguments | Optional arguments / defaults |
+| ---- | ------- | ------------------ | ----------------------------- |
+| `get_image_info` | Return image metadata via `identify`. | `inputPath` (string) | None |
+| `resize_image` | Resize while optionally preserving aspect. | `inputPath`, `outputPath` | `width`, `height`, `maintainAspect` (`true`), `quality` |
+| `crop_image` | Crop to a rectangle. | `inputPath`, `outputPath`, `width`, `height` | `x`, `y` |
+| `rotate_image` | Rotate by degrees. | `inputPath`, `outputPath`, `degrees` | `background` |
+| `flip_image` | Flip horizontally or vertically. | `inputPath`, `outputPath`, `mode` | None |
+| `convert_format` | Convert between formats. | `inputPath`, `outputPath` | `quality` |
+| `adjust_quality` | Change compression/quality levels. | `inputPath`, `outputPath`, `quality` | None |
+| `create_thumbnail` | Generate a thumbnail image. | `inputPath`, `outputPath` | `width`, `height`, `maintainAspect` (`true`) |
+| `add_watermark` | Overlay a watermark image. | `inputPath`, `outputPath`, `watermarkPath` | `position`, `opacity`, `offsetX`, `offsetY` |
+| `batch_resize` | Resize multiple files in one request. | `inputPaths` (JSON array), `outputDir` | `width`, `height`, `maintainAspect` (`true`), `quality` |
+| `adjust_brightness` | Modify brightness level. | `inputPath`, `outputPath`, `brightness` | None |
+| `adjust_contrast` | Modify contrast level. | `inputPath`, `outputPath`, `contrast` | None |
+| `adjust_saturation` | Modify saturation level. | `inputPath`, `outputPath`, `saturation` | None |
+| `blur_image` | Apply Gaussian blur. | `inputPath`, `outputPath`, `radius` | `sigma` |
+| `sharpen_image` | Sharpen details. | `inputPath`, `outputPath`, `radius` | `sigma` |
+
+**Usage tips**
+- Install ImageMagick and ensure `convert`/`magick` binaries are on your PATH before invoking the tools.
+- Escape Windows paths (for example `C:\\Images\\photo.jpg`) when calling from MCP clients.
+- Batch operations process files sequentially; monitor file sizes in responses to gauge compression results.
 
 ### json-mcp - Structured Data Toolkit
 - **Path:** `json-mcp/`
