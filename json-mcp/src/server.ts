@@ -63,8 +63,21 @@ function jsonPathQuery(data: string, path: string): any {
 // JSON Schema validation
 function validateSchema(data: string, schema: string): { valid: boolean; errors?: any } {
   try {
-    const parsedData = JSON.parse(data);
-    const parsedSchema = JSON.parse(schema);
+    // Parse data with detailed error
+    let parsedData;
+    try {
+      parsedData = JSON.parse(data);
+    } catch (e) {
+      throw new Error(`Invalid JSON data: ${e}`);
+    }
+
+    // Parse schema with detailed error
+    let parsedSchema;
+    try {
+      parsedSchema = JSON.parse(schema);
+    } catch (e) {
+      throw new Error(`Invalid JSON schema: ${e}`);
+    }
 
     const ajv = new (Ajv as any)({ allErrors: true });
     const validate = ajv.compile(parsedSchema);
@@ -82,7 +95,13 @@ function validateSchema(data: string, schema: string): { valid: boolean; errors?
 // YAML to JSON
 function yamlToJson(yamlData: string, indent: number = 2): string {
   try {
-    const parsed = YAML.parse(yamlData);
+    // Preprocess: Convert escaped newlines to actual newlines
+    const processedYaml = yamlData
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t');
+
+    const parsed = YAML.parse(processedYaml);
     return JSON.stringify(parsed, null, indent);
   } catch (error) {
     throw new Error(`YAML parsing failed: ${error}`);

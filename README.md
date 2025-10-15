@@ -9,6 +9,8 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 - [Quick Start](#quick-start)
 - [Integration With MCP Clients](#integration-with-mcp-clients)
 - [Server Reference](#server-reference)
+  - [archive-mcp - Archive Utilities](#archive-mcp--archive-utilities)
+  - [browser-mcp - Headless Browser Automation](#browser-mcp--headless-browser-automation)
   - [curl - HTTP Request Workbench](#curl--http-request-workbench)
   - [dice-roll - Gaming Dice Simulator](#dice-roll--gaming-dice-simulator)
   - [easy-view - Read-Only Workspace Explorer](#easy-view--read-only-workspace-explorer)
@@ -23,11 +25,13 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 
 ## Overview
 - Each server is self-contained (its own `package.json`, `src`, and compiled `dist` output) so you can build, deploy, or version them independently.
-- Tooling covers HTTP inspection, dice rolling, read-only codebase exploration, controlled file download management, structured data conversions (JSON/YAML/XML), Markdown analysis, Old School RuneScape data lookups, and timezone utilities.
+- Tooling covers HTTP inspection, browser automation, archive management, dice rolling, read-only codebase exploration, controlled file download management, structured data conversions (JSON/YAML/XML), Markdown analysis, Old School RuneScape data lookups, and timezone utilities.
 - All servers log operational details to stderr to keep stdout clean for MCP responses.
 - Distributed under the MIT license for unrestricted commercial and personal use.
 
 ## Repository Layout
+- `archive-mcp/` - Archive creation/extraction and gzip helpers.
+- `browser-mcp/` - Puppeteer-backed browsing, scraping, and capture automation.
 - `curl/` - HTTP request workbench backed by the local `curl` binary.
 - `dice-roll/` - Dice roller with standard notation parsing.
 - `easy-view/` - Read-only workspace explorer for safe file inspection.
@@ -54,7 +58,7 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 
 2. **Install dependencies per server.** Each server is an independent Node project.
    ```bash
-   for dir in curl dice-roll easy-view file-download json-mcp markdown-mcp osrs-lookup time; do
+   for dir in archive-mcp browser-mcp curl dice-roll easy-view file-download json-mcp markdown-mcp osrs-lookup time; do
      (cd "$dir" && npm install)
    done
    ```
@@ -62,7 +66,7 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 
 3. **Build the TypeScript once per server.**
    ```bash
-   for dir in curl dice-roll easy-view file-download json-mcp markdown-mcp osrs-lookup time; do
+   for dir in archive-mcp browser-mcp curl dice-roll easy-view file-download json-mcp markdown-mcp osrs-lookup time; do
      (cd "$dir" && npm run build)
    done
    ```
@@ -109,6 +113,16 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "args": ["C:/Tools/custom-mcp-servers/file-download/dist/server.js"],
          "workingDirectory": "C:/Tools/custom-mcp-servers/file-download"
        },
+       "archive-mcp": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/archive-mcp/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/archive-mcp"
+       },
+       "browser-mcp": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/browser-mcp/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/browser-mcp"
+       },
        "json-mcp": {
          "command": "node",
          "args": ["C:/Tools/custom-mcp-servers/json-mcp/dist/server.js"],
@@ -135,9 +149,62 @@ All servers speak MCP over stdio. You typically register them in your client's c
    - Use forward slashes in JSON to avoid escaping backslashes.
    - Ensure the working directory matches the project root so relative paths (for example, the easy-view index) resolve correctly.
 3. **Restart the client** so it reloads the MCP configuration.
-4. **Invoke tools by name** inside your client (`curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `format_json`, `markdown_to_html`, `get_current_time`, etc.). The server responses appear in the assistant panel.
+4. **Invoke tools by name** inside your client (`navigate`, `create_zip`, `curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `format_json`, `markdown_to_html`, `get_current_time`, etc.). The server responses appear in the assistant panel.
 
 ## Server Reference
+
+### archive-mcp - Archive Utilities
+- **Path:** `archive-mcp/`
+- **Purpose:** Create and extract ZIP/TAR/TAR.GZ archives plus gzip individual files.
+- **Key behaviours:**
+  - Ensures destination folders exist before writing archives or compressed files.
+  - Accepts JSON-encoded path arrays for multi-source operations so assistants can build inputs dynamically.
+  - Supports `stripComponents` for tar-based extraction to drop leading directory levels.
+
+| Tool | Purpose | Required arguments | Optional arguments / defaults |
+| ---- | ------- | ------------------ | ----------------------------- |
+| `create_zip` | Create a ZIP archive from files/directories. | `sources` (JSON string array), `outputPath` (string) | `compressionLevel` (`9`) |
+| `create_tar` | Build an uncompressed TAR archive. | `sources` (JSON string array), `outputPath` (string) | None |
+| `create_targz` | Build a gzip-compressed TAR archive. | `sources` (JSON string array), `outputPath` (string) | None |
+| `extract` | Extract ZIP/TAR/TAR.GZ into a directory. | `archivePath` (string), `outputDir` (string) | `stripComponents` (`0`) |
+| `list_contents` | List archive entries without extracting. | `archivePath` (string) | None |
+| `compress_file` | Gzip a single file. | `inputPath` (string) | `outputPath` (string) |
+| `decompress_file` | Gunzip a file. | `inputPath` (string) | `outputPath` (string) |
+
+**Usage tips**
+- Provide absolute paths when possible; relative inputs resolve from the server’s working directory.
+- Encode `sources` as `JSON.stringify([...])` before passing to keep argument schemas simple.
+- Extraction overwrites existing files—target empty temp directories when unsure.
+
+### browser-mcp - Headless Browser Automation
+- **Path:** `browser-mcp/`
+- **Purpose:** Drive a headless Chromium instance for navigation, scraping, and capture tasks.
+- **Key behaviours:**
+  - Reuses a single Puppeteer browser/page between calls for performance; call `close_browser` to reset.
+  - Launches with `--no-sandbox` flags for compatibility with CI and container environments.
+  - Returns screenshots as base64 when no path is supplied, avoiding filesystem writes by default.
+
+| Tool | Purpose | Required arguments | Optional arguments / defaults |
+| ---- | ------- | ------------------ | ----------------------------- |
+| `navigate` | Load a URL and wait for completion. | `url` (string) | `waitUntil` (`networkidle2`) |
+| `screenshot` | Capture page or element image. | None | `fullPage` (`true`), `selector`, `path` |
+| `get_html` | Return HTML markup. | None | `selector` |
+| `get_text` | Return text content. | None | `selector` |
+| `click` | Click an element. | `selector` (string) | `waitForNavigation` (`false`) |
+| `type` | Type into an input/textarea. | `selector` (string), `text` (string) | `delay` (`0`), `clear` (`true`) |
+| `evaluate` | Run JavaScript in page context. | `script` (string) | None |
+| `wait_for_selector` | Wait for an element to appear. | `selector` (string) | `timeout` (`30000`) |
+| `pdf` | Save the current page as PDF. | `path` (string) | `fullPage` (`true`) |
+| `get_cookies` | Retrieve cookies. | None | `url` |
+| `set_cookies` | Set cookies on the current page. | `cookies` (JSON string array) | None |
+| `extract_data` | Pull structured data via CSS selectors. | `selectors` (JSON string object) | None |
+| `fill_form` | Fill multiple fields and optionally submit. | `fields` (JSON string object) | `submitSelector` |
+| `close_browser` | Close the active browser instance. | None | None |
+
+**Usage tips**
+- Call `navigate` before other actions to guarantee the page exists.
+- Pass JSON strings (e.g., `JSON.stringify({ "#email": "user@example.com" })`) for `fields`, `selectors`, and `cookies`.
+- Use `wait_for_selector` between navigation and extraction to ensure dynamic content is present.
 
 ### curl - HTTP Request Workbench
 - **Path:** `curl/`
