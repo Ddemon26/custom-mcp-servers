@@ -14,14 +14,13 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
   - [easy-view - Read-Only Workspace Explorer](#easy-view--read-only-workspace-explorer)
   - [file-download - Persistent Download Sink](#file-download--persistent-download-sink)
   - [osrs-lookup - Old School RuneScape Lookup](#osrs-lookup--old-school-runescape-lookup)
-  - [time - Time Zone Utilities](#time--time-zone-utilities)
 - [Development Workflow](#development-workflow)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
 ## Overview
 - Each server is self-contained (its own `package.json`, `src`, and compiled `dist` output) so you can build, deploy, or version them independently.
-- Tooling covers HTTP inspection, dice rolling, read-only codebase exploration, controlled file download management, Old School RuneScape data lookups, and timezone utilities.
+- Tooling covers HTTP inspection, dice rolling, read-only codebase exploration, controlled file download management, and Old School RuneScape data lookups.
 - All servers log operational details to stderr to keep stdout clean for MCP responses.
 - Distributed under the MIT license for unrestricted commercial and personal use.
 
@@ -31,7 +30,6 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 - `easy-view/` - Read-only workspace explorer for safe file inspection.
 - `file-download/` - Persistent download sink rooted in `~/.claude/downloads`.
 - `osrs-lookup/` - Old School RuneScape Grand Exchange and highscore lookup tools.
-- `time/` - Timezone helpers for fetching current times and converting between regions.
 - `.github/workflows/` - Release automation that packages each server per tag.
 
 ## Prerequisites
@@ -51,7 +49,7 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 
 2. **Install dependencies per server.** Each server is an independent Node project.
    ```bash
-   for dir in curl dice-roll easy-view file-download osrs-lookup time; do
+   for dir in curl dice-roll easy-view file-download osrs-lookup; do
      (cd "$dir" && npm install)
    done
    ```
@@ -59,7 +57,7 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 
 3. **Build the TypeScript once per server.**
    ```bash
-   for dir in curl dice-roll easy-view file-download osrs-lookup time; do
+   for dir in curl dice-roll easy-view file-download osrs-lookup; do
      (cd "$dir" && npm run build)
    done
    ```
@@ -109,11 +107,6 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "command": "node",
          "args": ["C:/Tools/custom-mcp-servers/osrs-lookup/dist/server.js"],
          "workingDirectory": "C:/Tools/custom-mcp-servers/osrs-lookup"
-       },
-       "time": {
-         "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/time/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/time"
        }
      }
    }
@@ -121,7 +114,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
    - Use forward slashes in JSON to avoid escaping backslashes.
    - Ensure the working directory matches the project root so relative paths (for example, the easy-view index) resolve correctly.
 3. **Restart the client** so it reloads the MCP configuration.
-4. **Invoke tools by name** inside your client (`curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `get_current_time`, etc.). The server responses appear in the assistant panel.
+4. **Invoke tools by name** inside your client (`curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, etc.). The server responses appear in the assistant panel.
 
 ## Server Reference
 
@@ -235,24 +228,6 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - URL-encode player names before passing them if they contain spaces; the server takes care of the rest.
 - Use `ge_category` first to discover available item IDs, then drill down with `ge_item_detail` or `ge_price_graph`.
 - Highscore lookups require exact display names; check spelling if you see `HTTP 404` responses.
-
-### time - Time Zone Utilities
-- **Path:** `time/`
-- **Purpose:** Fetch current times or convert between timezones using IANA zone names.
-- **Key behaviours:**
-  - Provides a local timezone default (discovered via `Intl`) so simple requests work without extra input.
-  - Validates IANA timezone identifiers before processing to avoid ambiguous or invalid regions.
-  - Uses Luxon for accurate daylight saving handling and offset calculations.
-
-| Tool | Purpose | Required arguments | Optional arguments / defaults |
-| ---- | ------- | ------------------ | ----------------------------- |
-| `get_current_time` | Return the current time in a specific timezone. | `timezone` (string) | None (defaults to detected local TZ) |
-| `convert_time` | Translate a HH:MM time between timezones. | `source_timezone` (string), `time` (string), `target_timezone` (string) | None |
-
-**Usage tips**
-- Supply times in 24-hour `HH:MM` format; seconds are not required.
-- Pass explicit timezones when you need predictable behavior across deployments; fall back to the default for quick local checks.
-- Conversion responses include both source and target breakdowns plus the offset difference string for quick reference.
 
 ## Development Workflow
 - Run `npm run dev` for quick experiments; it uses `ts-node` so TypeScript changes take effect immediately (restart the process after edits).
