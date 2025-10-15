@@ -24,14 +24,6 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 - All servers log operational details to stderr to keep stdout clean for MCP responses.
 - Distributed under the MIT license for unrestricted commercial and personal use.
 
-## Repository Layout
-- `curl/` - HTTP request workbench backed by the local `curl` binary.
-- `dice-roll/` - Dice roller with standard notation parsing.
-- `easy-view/` - Read-only workspace explorer for safe file inspection.
-- `file-download/` - Persistent download sink rooted in `~/.claude/downloads`.
-- `osrs-lookup/` - Old School RuneScape Grand Exchange and highscore lookup tools.
-- `.github/workflows/` - Release automation that packages each server per tag.
-
 ## Prerequisites
 - Node.js 18 LTS or newer (ships with npm 9+). Earlier runtimes may lack modern ECMAScript APIs used by `@modelcontextprotocol/sdk`.
 - npm (installed with Node) or another Node package manager if you prefer (`pnpm`, `yarn`). Commands below use npm.
@@ -63,6 +55,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
 
 1. **Build the server (`npm run build`)** you want to expose.
 2. **Add an entry to your MCP client configuration.** Below is a Claude Desktop example for Windows; adapt the paths for macOS (`~/Library/Application Support/Claude/claude_desktop_config.json`) or Linux (`~/.config/Claude/claude_desktop_config.json`).
+
    ```jsonc
    {
      "mcpServers": {
