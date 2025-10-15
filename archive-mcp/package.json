@@ -1,0 +1,35 @@
+{
+  "name": "archive-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for file compression and archiving - zip, tar, gzip operations",
+  "type": "module",
+  "main": "dist/server.js",
+  "bin": {
+    "archive-mcp-server": "./dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "dev": "ts-node --esm src/server.ts",
+    "start": "node dist/server.js",
+    "clean": "shx rm -rf dist",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1",
+    "archiver": "^7.0.1",
+    "decompress": "^4.2.1",
+    "tar": "^7.4.3"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.2",
+    "@types/decompress": "^4.2.7",
+    "@types/node": "^22.0.0",
+    "@types/tar": "^6.1.13",
+    "shx": "^0.3.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

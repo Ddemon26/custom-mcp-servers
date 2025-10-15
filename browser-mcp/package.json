@@ -1,0 +1,30 @@
+{
+  "name": "browser-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for browser automation using Puppeteer - web scraping, testing, and screenshots",
+  "type": "module",
+  "main": "dist/server.js",
+  "bin": {
+    "browser-mcp-server": "./dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "dev": "ts-node --esm src/server.ts",
+    "start": "node dist/server.js",
+    "clean": "shx rm -rf dist",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1",
+    "puppeteer": "^24.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "shx": "^0.3.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
