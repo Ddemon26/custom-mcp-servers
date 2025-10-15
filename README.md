@@ -45,31 +45,14 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
    git clone https://github.com/Ddemon26/custom-mcp-servers.git
    cd custom-mcp-servers
    ```
-   If the repository is already on disk, just `cd` to it.
 
-2. **Install dependencies per server.** Each server is an independent Node project.
-   ```bash
-   for dir in curl dice-roll easy-view file-download osrs-lookup; do
-     (cd "$dir" && npm install)
-   done
-   ```
-   Repeat the loop whenever you pull upstream changes that alter `package.json` files.
-
-3. **Build the TypeScript once per server.**
-   ```bash
-   for dir in curl dice-roll easy-view file-download osrs-lookup; do
-     (cd "$dir" && npm run build)
-   done
-   ```
-   Each build generates `dist/server.js`, which is the entry point you register with MCP clients.
-
-4. **Run a server locally (manual verification).**
+2. **Run a server locally (manual verification).**
    ```powershell
    npm run start
    ```
    The process binds stdio and will wait for requests from an MCP client. Stop with `Ctrl+C` after confirming the build.
 
-5. **(Optional) Use live reload while iterating.**
+3. **(Optional) Use live reload while iterating.**
    ```powershell
    npm run dev
    ```
@@ -83,32 +66,27 @@ All servers speak MCP over stdio. You typically register them in your client's c
    ```jsonc
    {
      "mcpServers": {
-       "curl": {
-         "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/curl/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/curl"
-       },
-       "dice-roll": {
-         "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/dice-roll/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/dice-roll"
-       },
-       "easy-view": {
-         "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/easy-view/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/easy-view"
-       },
-       "file-download": {
-         "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/file-download/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/file-download"
-       },
-       "osrs-lookup": {
-         "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/osrs-lookup/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/osrs-lookup"
-       }
-     }
+    "curl": {
+      "command": "node",
+      "args": ["/your/path/to/custom-mcp-servers/curl/src/server.js"]
+    },
+    "dice-roll": {
+      "command": "node",
+      "args": ["/your/path/to/custom-mcp-servers/dice-roll/src/server.js"]
+    },
+    "easy-view": {
+      "command": "node",
+      "args": ["/your/path/to/custom-mcp-servers/easy-view/src/server.js"]
+    },
+    "file-download": {
+      "command": "node",
+      "args": ["/your/path/to/custom-mcp-servers/file-download/src/server.js"]
+    },
+    "osrs-lookup": {
+      "command": "node",
+      "args": ["/your/path/to/custom-mcp-servers/osrs-lookup/src/server.js"]
+        }
+      }
    }
    ```
    - Use forward slashes in JSON to avoid escaping backslashes.
