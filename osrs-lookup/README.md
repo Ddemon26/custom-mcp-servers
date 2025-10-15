@@ -114,11 +114,13 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "runescape-lookup": {
       "command": "node",
-      "args": ["PATH_TO_YOUR_SERVER/src/server.ts"]
+      "args": ["/absolute/path/to/osrs-lookup/dist/server.js"]
     }
   }
 }
 ```
+
+Replace `/absolute/path/to/` with the actual path where you cloned this repository.
 
 ### VS Code MCP
 
@@ -129,7 +131,7 @@ Add to your VS Code MCP settings:
   "servers": {
     "runescape-lookup": {
       "command": "node",
-      "args": ["PATH_TO_YOUR_SERVER/src/server.ts"]
+      "args": ["/absolute/path/to/osrs-lookup/dist/server.js"]
     }
   }
 }
