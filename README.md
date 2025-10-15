@@ -9,10 +9,10 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 - [Quick Start](#quick-start)
 - [Integration With MCP Clients](#integration-with-mcp-clients)
 - [Server Reference](#server-reference)
-  - [curl — HTTP Request Workbench](#curl--http-request-workbench)
-  - [dice-roll — Gaming Dice Simulator](#dice-roll--gaming-dice-simulator)
-  - [easy-view — Read-Only Workspace Explorer](#easy-view--read-only-workspace-explorer)
-  - [file-download — Persistent Download Sink](#file-download--persistent-download-sink)
+  - [curl - HTTP Request Workbench](#curl--http-request-workbench)
+  - [dice-roll - Gaming Dice Simulator](#dice-roll--gaming-dice-simulator)
+  - [easy-view - Read-Only Workspace Explorer](#easy-view--read-only-workspace-explorer)
+  - [file-download - Persistent Download Sink](#file-download--persistent-download-sink)
 - [Development Workflow](#development-workflow)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
@@ -23,28 +23,17 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 - All servers log operational details to stderr to keep stdout clean for MCP responses.
 - Distributed under the MIT license for unrestricted commercial and personal use.
 
-## Repository Layout
-```text
-custom-mcp-servers/
-├── curl/           # HTTP request capture and replay (requires local curl binary)
-├── dice-roll/      # 2–1000-sided dice roller with validation
-├── easy-view/      # Read-only file explorer and search across the working directory
-├── file-download/  # Persist files to ~/.claude/downloads with sanitisation
-├── LICENSE
-└── README.md
-```
-
 ## Prerequisites
 - Node.js 18 LTS or newer (ships with npm 9+). Earlier runtimes may lack modern ECMAScript APIs used by `@modelcontextprotocol/sdk`.
 - npm (installed with Node) or another Node package manager if you prefer (`pnpm`, `yarn`). Commands below use npm.
 - The `curl` command-line client accessible in your `PATH` for the HTTP workbench. Most macOS and Linux distributions include it; on Windows install curl or enable it via Windows features.
 - A terminal that supports the scripts you invoke. On Windows, the provided `npm run clean` uses Unix `rm -rf`; either run it from Git Bash/WSL or replace with `Remove-Item -Recurse -Force dist`.
-- An MCP-compatible client (for example, Claude Desktop ≥ v1.5, an IDE with MCP support, or a custom automation harness).
+- An MCP-compatible client (for example, Claude Desktop >= v1.5, an IDE with MCP support, or a custom automation harness).
 
 ## Quick Start
 1. **Clone or open the repository.**
    ```powershell
-   git clone https://github.com/your-org/custom-mcp-servers.git
+   git clone https://github.com/Ddemon26/custom-mcp-servers.git
    cd custom-mcp-servers
    ```
    If the repository is already on disk, just `cd` to it.
@@ -53,18 +42,18 @@ custom-mcp-servers/
    ```powershell
    cd curl
    npm install
-   cd ..\dice-roll
+   cd ..|-- LICENSE `n`-- README.md dice-roll
    npm install
-   cd ..\easy-view
+   cd ..|-- LICENSE `n`-- README.md easy-view
    npm install
-   cd ..\file-download
+   cd ..|-- LICENSE `n`-- README.md file-download
    npm install
    ```
    Repeat the steps whenever you pull upstream changes that alter `package.json` files.
 
 3. **Build the TypeScript once per server.**
    ```powershell
-   cd C:\Tools\custom-mcp-servers\curl
+   cd C:|-- LICENSE `n`-- README.md Tools|-- LICENSE `n`-- README.md custom-mcp-servers|-- LICENSE `n`-- README.md curl
    npm run build
    # Repeat for dice-roll, easy-view, and file-download
    ```
@@ -120,7 +109,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
 
 ## Server Reference
 
-### curl — HTTP Request Workbench
+### curl - HTTP Request Workbench
 - **Path:** `curl/`
 - **Purpose:** Issue HTTP requests with the system `curl` binary, capture responses once, and explore them without spending additional model tokens.
 - **Key behaviours:**
@@ -143,27 +132,27 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - Provide headers as a JSON object (for example, `{ "Authorization": "Bearer …" }`).
 - If you see `curl` command errors, verify the executable is in your `PATH` or supply absolute URLs.
 
-### dice-roll — Gaming Dice Simulator
+### dice-roll - Gaming Dice Simulator
 - **Path:** `dice-roll/`
 - **Purpose:** Provide predictable, validated dice rolls for tabletop or gaming scenarios.
 - **Key behaviours:**
-  - Validates side counts (2–1000) and roll counts (1–20) to stop runaway requests.
+  - Validates side counts (2-1000) and roll counts (1-20) to stop runaway requests.
   - Uses cryptographically secure randomness provided by Node's `Math.random`? Actually default. Node's `Math.random` is not cryptographically secure, but unstoppable? Should we mention? Wait is `Math.random` used? Check code: uses `Math.floor(Math.random() * ...)` - that's not cryptographically secure. Should mention "pseudo-random" or "Math.random" to avoid misrepresenting as cryptographically secure. So we should say "Uses Node's Math.random (sufficient for casual use, not cryptographically secure)". 
-  - Formats output with total, individual rolls, and percentile support (00–99 by rolling two d10s).
+  - Formats output with total, individual rolls, and percentile support (00-99 by rolling two d10s).
 
 | Tool | Purpose | Required arguments | Optional arguments / defaults |
 | ---- | ------- | ------------------ | ----------------------------- |
-| `roll_d100` | Roll a 100-sided die one or more times. | None | `count` (string, `"1"`, accepts `1`–`20`) |
-| `roll_custom_die` | Roll a die with a custom number of sides. | None | `sides` (string, default `"6"`, accepts `2`–`1000`), `count` (string, default `"1"`, accepts `1`–`20`) |
+| `roll_d100` | Roll a 100-sided die one or more times. | None | `count` (string, `"1"`, accepts `1`-`20`) |
+| `roll_custom_die` | Roll a die with a custom number of sides. | None | `sides` (string, default `"6"`, accepts `2`-`1000`), `count` (string, default `"1"`, accepts `1`-`20`) |
 | `roll_standard_dice` | Parse standard notation (`XdY`) and roll accordingly. | None | `dice_notation` (string, default `"1d6"`, supports up to 20 dice and 1000 sides) |
-| `roll_percentile` | Roll percentile dice (00–99). | None | None |
+| `roll_percentile` | Roll percentile dice (00-99). | None | None |
 
 **Usage tips**
 - Arguments are parsed as strings to match typical MCP payloads; whitespace is trimmed automatically.
 - The server logs rolls to stderr (useful when debugging or auditing results).
 - Because randomness uses `Math.random`, do not rely on it for security-critical scenarios.
 
-### easy-view — Read-Only Workspace Explorer
+### easy-view - Read-Only Workspace Explorer
 - **Path:** `easy-view/`
 - **Purpose:** Safely inspect files in the current working directory (the directory where the MCP client starts the server) without editing anything.
 - **Key behaviours:**
@@ -188,11 +177,11 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - `view_file` highlights the `around_line` with a marker so you can quickly spot the target line in context.
 - If you add or delete large numbers of files, run `scan_directory` with `refresh: true` to keep stats accurate.
 
-### file-download — Persistent Download Sink
+### file-download - Persistent Download Sink
 - **Path:** `file-download/`
 - **Purpose:** Provide a safe place for MCP assistants to persist generated files to the user's machine under `~/.claude/downloads`.
 - **Key behaviours:**
-  - Creates the downloads directory lazily (`~/.claude/downloads`) and reuses it across sessions. On Windows this resolves to `%USERPROFILE%\.claude\downloads`.
+  - Creates the downloads directory lazily (`~/.claude/downloads`) and reuses it across sessions. On Windows this resolves to `%USERPROFILE%|-- LICENSE `n`-- README.md .claude|-- LICENSE `n`-- README.md downloads`.
   - Sanitises filenames to block path traversal, reserved characters, and leading dots before writing.
   - Supports both UTF-8 text saves and arbitrary binary blobs supplied as base64.
   - Offers listing and deletion helpers so the assistant can manage its outputs explicitly.
@@ -207,7 +196,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
 
 **Usage tips**
 - Supply only the intended filename; directories are not permitted and will be flattened during sanitisation.
-- `save_binary_file` rejects invalid base64 strings—validate data before sending.
+- `save_binary_file` rejects invalid base64 strings - validate data before sending.
 - Use `list_downloads` to confirm the file landed as expected before instructing a user to open it.
 
 ## Development Workflow
