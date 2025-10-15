@@ -4,7 +4,6 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 
 ## Table of Contents
 - [Overview](#overview)
-- [Repository Layout](#repository-layout)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Integration With MCP Clients](#integration-with-mcp-clients)
@@ -29,18 +28,6 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 - All servers log operational details to stderr to keep stdout clean for MCP responses.
 - Distributed under the MIT license for unrestricted commercial and personal use.
 
-## Repository Layout
-- `archive-mcp/` - Archive creation/extraction and gzip helpers.
-- `browser-mcp/` - Puppeteer-backed browsing, scraping, and capture automation.
-- `curl/` - HTTP request workbench backed by the local `curl` binary.
-- `dice-roll/` - Dice roller with standard notation parsing.
-- `easy-view/` - Read-only workspace explorer for safe file inspection.
-- `file-download/` - Persistent download sink rooted in `~/.claude/downloads`.
-- `json-mcp/` - Structured data toolkit for JSON, YAML, and XML validation and conversion.
-- `markdown-mcp/` - Markdown formatter, validator, and content extractor.
-- `osrs-lookup/` - Old School RuneScape Grand Exchange and highscore lookup tools.
-- `time/` - Timezone helpers for fetching current times and converting between regions.
-- `.github/workflows/` - Release automation that packages each server per tag.
 
 ## Prerequisites
 - Node.js 18 LTS or newer (ships with npm 9+). Earlier runtimes may lack modern ECMAScript APIs used by `@modelcontextprotocol/sdk`.
@@ -93,6 +80,16 @@ All servers speak MCP over stdio. You typically register them in your client's c
    ```jsonc
    {
      "mcpServers": {
+       "archive-mcp": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/archive-mcp/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/archive-mcp"
+       },
+       "browser-mcp": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/browser-mcp/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/browser-mcp"
+       },
        "curl": {
          "command": "node",
          "args": ["C:/Tools/custom-mcp-servers/curl/dist/server.js"],
@@ -112,16 +109,6 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "command": "node",
          "args": ["C:/Tools/custom-mcp-servers/file-download/dist/server.js"],
          "workingDirectory": "C:/Tools/custom-mcp-servers/file-download"
-       },
-       "archive-mcp": {
-         "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/archive-mcp/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/archive-mcp"
-       },
-       "browser-mcp": {
-         "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/browser-mcp/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/browser-mcp"
        },
        "json-mcp": {
          "command": "node",
