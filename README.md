@@ -15,6 +15,7 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
   - [easy-view - Read-Only Workspace Explorer](#easy-view--read-only-workspace-explorer)
   - [file-download - Persistent Download Sink](#file-download--persistent-download-sink)
   - [ffmpeg-mcp - Media Processing Toolkit](#ffmpeg-mcp--media-processing-toolkit)
+  - [html-mcp - HTML Parsing Toolkit](#html-mcp--html-parsing-toolkit)
   - [json-mcp - Structured Data Toolkit](#json-mcp--structured-data-toolkit)
   - [markdown-mcp - Markdown Utilities](#markdown-mcp--markdown-utilities)
   - [osrs-lookup - Old School RuneScape Lookup](#osrs-lookup--old-school-runescape-lookup)
@@ -102,6 +103,10 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/yt-dlp-mcp/src/server.js"]
        },
+       "html-mcp": {
+         "command": "node",
+         "args": ["/your/path/to/custom-mcp-servers/html-mcp/src/server.js"]
+       },
        "json-mcp": {
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/json-mcp/src/server.js"]
@@ -124,7 +129,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
    - Use forward slashes in JSON to avoid escaping backslashes.
    - Ensure the working directory matches the project root so relative paths (for example, the easy-view index) resolve correctly.
 3. **Restart the client** so it reloads the MCP configuration.
-4. **Invoke tools by name** inside your client (`navigate`, `create_zip`, `convert_video`, `download_video`, `curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `format_json`, `markdown_to_html`, `get_current_time`, etc.). The server responses appear in the assistant panel.
+4. **Invoke tools by name** inside your client (`navigate`, `create_zip`, `convert_video`, `download_video`, `parse_html`, `curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `format_json`, `markdown_to_html`, `get_current_time`, etc.). The server responses appear in the assistant panel.
 
 ## Server Reference
 
