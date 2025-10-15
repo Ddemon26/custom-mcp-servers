@@ -29,6 +29,29 @@ const ArchiveTools = {
   ADD_TO_ZIP: "add_to_zip",
 } as const;
 
+// Helper function to parse sources (accepts JSON array or space-separated string)
+function parseSources(sourcesStr: string): string[] {
+  // Try parsing as JSON array first
+  try {
+    const parsed = JSON.parse(sourcesStr);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    // If it's a single string in JSON format, wrap it in an array
+    if (typeof parsed === 'string') {
+      return [parsed];
+    }
+  } catch {
+    // Not valid JSON, treat as space/comma/newline-separated string
+  }
+
+  // Split by whitespace, commas, or newlines and filter empty strings
+  return sourcesStr
+    .split(/[\s,\n]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
 // Helper function to check if path exists
 async function pathExists(path: string): Promise<boolean> {
   try {
@@ -337,7 +360,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             sources: {
               type: "string",
-              description: "JSON array of file/directory paths to include"
+              description: "File/directory paths to include (space-separated, comma-separated, or JSON array)"
             },
             outputPath: {
               type: "string",
@@ -359,7 +382,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             sources: {
               type: "string",
-              description: "JSON array of file/directory paths to include"
+              description: "File/directory paths to include (space-separated, comma-separated, or JSON array)"
             },
             outputPath: {
               type: "string",
@@ -377,7 +400,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             sources: {
               type: "string",
-              description: "JSON array of file/directory paths to include"
+              description: "File/directory paths to include (space-separated, comma-separated, or JSON array)"
             },
             outputPath: {
               type: "string",
@@ -477,12 +500,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case ArchiveTools.CREATE_ZIP: {
         if (typeof args.sources !== "string") {
-          throw new McpError(ErrorCode.InvalidParams, "sources must be a JSON string");
+          throw new McpError(ErrorCode.InvalidParams, "sources must be a string");
         }
         if (typeof args.outputPath !== "string") {
           throw new McpError(ErrorCode.InvalidParams, "outputPath must be a string");
         }
-        const sources = JSON.parse(args.sources);
+        const sources = parseSources(args.sources);
         const compressionLevel = typeof args.compressionLevel === "number"
           ? args.compressionLevel
           : 9;
@@ -492,24 +515,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case ArchiveTools.CREATE_TAR: {
         if (typeof args.sources !== "string") {
-          throw new McpError(ErrorCode.InvalidParams, "sources must be a JSON string");
+          throw new McpError(ErrorCode.InvalidParams, "sources must be a string");
         }
         if (typeof args.outputPath !== "string") {
           throw new McpError(ErrorCode.InvalidParams, "outputPath must be a string");
         }
-        const sources = JSON.parse(args.sources);
+        const sources = parseSources(args.sources);
         const result = await createTar(sources, args.outputPath, false);
         return { content: [{ type: "text", text: result }] };
       }
 
       case ArchiveTools.CREATE_TARGZ: {
         if (typeof args.sources !== "string") {
-          throw new McpError(ErrorCode.InvalidParams, "sources must be a JSON string");
+          throw new McpError(ErrorCode.InvalidParams, "sources must be a string");
         }
         if (typeof args.outputPath !== "string") {
           throw new McpError(ErrorCode.InvalidParams, "outputPath must be a string");
         }
-        const sources = JSON.parse(args.sources);
+        const sources = parseSources(args.sources);
         const result = await createTar(sources, args.outputPath, true);
         return { content: [{ type: "text", text: result }] };
       }

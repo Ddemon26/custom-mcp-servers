@@ -67,11 +67,21 @@ Add to your VS Code MCP settings:
 Create a ZIP archive from files and/or directories.
 
 **Parameters:**
-- `sources` (string, required): JSON array of file/directory paths to include
+- `sources` (string, required): File/directory paths to include (space-separated, comma-separated, or JSON array)
 - `outputPath` (string, required): Path where the ZIP file will be created
 - `compressionLevel` (number, optional): Compression level 0-9 (default: 9)
 
-**Example:**
+**Examples:**
+
+Space-separated:
+```json
+{
+  "sources": "file1.txt file2.txt folder/",
+  "outputPath": "archive.zip"
+}
+```
+
+JSON array:
 ```json
 {
   "sources": "[\"/path/to/file1.txt\", \"/path/to/folder\"]",
@@ -84,10 +94,20 @@ Create a ZIP archive from files and/or directories.
 Create a TAR archive from files and/or directories.
 
 **Parameters:**
-- `sources` (string, required): JSON array of file/directory paths to include
+- `sources` (string, required): File/directory paths to include (space-separated, comma-separated, or JSON array)
 - `outputPath` (string, required): Path where the TAR file will be created
 
-**Example:**
+**Examples:**
+
+Space-separated:
+```json
+{
+  "sources": "file1.txt file2.txt",
+  "outputPath": "archive.tar"
+}
+```
+
+JSON array:
 ```json
 {
   "sources": "[\"/path/to/file1.txt\", \"/path/to/folder\"]",
@@ -99,10 +119,20 @@ Create a TAR archive from files and/or directories.
 Create a compressed TAR.GZ archive from files and/or directories.
 
 **Parameters:**
-- `sources` (string, required): JSON array of file/directory paths to include
+- `sources` (string, required): File/directory paths to include (space-separated, comma-separated, or JSON array)
 - `outputPath` (string, required): Path where the TAR.GZ file will be created
 
-**Example:**
+**Examples:**
+
+Space-separated:
+```json
+{
+  "sources": "src/ config/ README.md",
+  "outputPath": "backup.tar.gz"
+}
+```
+
+JSON array:
 ```json
 {
   "sources": "[\"/path/to/file1.txt\", \"/path/to/folder\"]",
