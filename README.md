@@ -77,58 +77,48 @@ All servers speak MCP over stdio. You typically register them in your client's c
 1. **Build the server (`npm run build`)** you want to expose.
 2. **Add an entry to your MCP client configuration.** Below is a Claude Desktop example for Windows; adapt the paths for macOS (`~/Library/Application Support/Claude/claude_desktop_config.json`) or Linux (`~/.config/Claude/claude_desktop_config.json`).
 
-   ```jsonc
+   ```json
    {
      "mcpServers": {
        "archive-mcp": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/archive-mcp/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/archive-mcp"
+         "args": ["/your/path/to/custom-mcp-servers/archive-mcp/src/server.js"]
        },
        "browser-mcp": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/browser-mcp/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/browser-mcp"
+         "args": ["/your/path/to/custom-mcp-servers/browser-mcp/src/server.js"]
        },
        "curl": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/curl/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/curl"
+         "args": ["/your/path/to/custom-mcp-servers/curl/src/server.js"]
        },
        "dice-roll": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/dice-roll/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/dice-roll"
+         "args": ["/your/path/to/custom-mcp-servers/dice-roll/src/server.js"]
        },
        "easy-view": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/easy-view/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/easy-view"
+         "args": ["/your/path/to/custom-mcp-servers/easy-view/src/server.js"]
        },
        "file-download": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/file-download/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/file-download"
+         "args": ["/your/path/to/custom-mcp-servers/file-download/src/server.js"]
        },
        "json-mcp": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/json-mcp/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/json-mcp"
+         "args": ["/your/path/to/custom-mcp-servers/json-mcp/src/server.js"]
        },
        "markdown-mcp": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/markdown-mcp/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/markdown-mcp"
+         "args": ["/your/path/to/custom-mcp-servers/markdown-mcp/src/server.js"]
        },
        "osrs-lookup": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/osrs-lookup/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/osrs-lookup"
+         "args": ["/your/path/to/custom-mcp-servers/osrs-lookup/src/server.js"]
        },
        "time": {
          "command": "node",
-         "args": ["C:/Tools/custom-mcp-servers/time/dist/server.js"],
-         "workingDirectory": "C:/Tools/custom-mcp-servers/time"
+         "args": ["/your/path/to/custom-mcp-servers/time/src/server.js"]
        }
      }
    }
