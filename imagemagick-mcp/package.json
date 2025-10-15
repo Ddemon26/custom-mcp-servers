@@ -1,0 +1,31 @@
+{
+  "name": "imagemagick-mcp-server",
+  "version": "1.0.0",
+  "description": "A comprehensive MCP server for ImageMagick image processing operations",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "mcp",
+    "imagemagick",
+    "image",
+    "processing",
+    "graphics",
+    "magick",
+    "convert"
+  ],
+  "author": "Local",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+}
