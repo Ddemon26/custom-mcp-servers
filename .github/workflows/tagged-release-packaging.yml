@@ -1,0 +1,60 @@
+name: Package MCP Servers
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            curl/package-lock.json
+            dice-roll/package-lock.json
+            easy-view/package-lock.json
+            file-download/package-lock.json
+
+      - name: Install dependencies and build servers
+        run: |
+          set -eo pipefail
+          for dir in curl dice-roll easy-view file-download; do
+            echo "Installing dependencies for $dir"
+            (cd "$dir" && npm ci)
+            echo "Building $dir"
+            (cd "$dir" && npm run build)
+          done
+
+      - name: Prepare release archives
+        run: |
+          set -eo pipefail
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          mkdir -p artifacts
+          for dir in curl dice-roll easy-view file-download; do
+            echo "Cleaning $dir before packaging"
+            rm -rf "$dir/node_modules"
+            archive="artifacts/${dir}-${TAG_NAME}.zip"
+            echo "Creating ${archive}"
+            zip -r "$archive" "$dir"
+          done
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: artifacts/*.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
