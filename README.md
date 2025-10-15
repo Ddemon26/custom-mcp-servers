@@ -13,15 +13,24 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
   - [dice-roll - Gaming Dice Simulator](#dice-roll--gaming-dice-simulator)
   - [easy-view - Read-Only Workspace Explorer](#easy-view--read-only-workspace-explorer)
   - [file-download - Persistent Download Sink](#file-download--persistent-download-sink)
+  - [osrs-lookup - Old School RuneScape Lookup](#osrs-lookup--old-school-runescape-lookup)
 - [Development Workflow](#development-workflow)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
 ## Overview
 - Each server is self-contained (its own `package.json`, `src`, and compiled `dist` output) so you can build, deploy, or version them independently.
-- Tooling covers HTTP inspection, dice rolling, read-only codebase exploration, and controlled file download management.
+- Tooling covers HTTP inspection, dice rolling, read-only codebase exploration, controlled file download management, and Old School RuneScape data lookups.
 - All servers log operational details to stderr to keep stdout clean for MCP responses.
 - Distributed under the MIT license for unrestricted commercial and personal use.
+
+## Repository Layout
+- `curl/` - HTTP request workbench backed by the local `curl` binary.
+- `dice-roll/` - Dice roller with standard notation parsing.
+- `easy-view/` - Read-only workspace explorer for safe file inspection.
+- `file-download/` - Persistent download sink rooted in `~/.claude/downloads`.
+- `osrs-lookup/` - Old School RuneScape Grand Exchange and highscore lookup tools.
+- `.github/workflows/` - Release automation that packages each server per tag.
 
 ## Prerequisites
 - Node.js 18 LTS or newer (ships with npm 9+). Earlier runtimes may lack modern ECMAScript APIs used by `@modelcontextprotocol/sdk`.
@@ -39,25 +48,20 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
    If the repository is already on disk, just `cd` to it.
 
 2. **Install dependencies per server.** Each server is an independent Node project.
-   ```powershell
-   cd curl
-   npm install
-   cd ..|-- LICENSE `n`-- README.md dice-roll
-   npm install
-   cd ..|-- LICENSE `n`-- README.md easy-view
-   npm install
-   cd ..|-- LICENSE `n`-- README.md file-download
-   npm install
+   ```bash
+   for dir in curl dice-roll easy-view file-download osrs-lookup; do
+     (cd "$dir" && npm install)
+   done
    ```
-   Repeat the steps whenever you pull upstream changes that alter `package.json` files.
+   Repeat the loop whenever you pull upstream changes that alter `package.json` files.
 
 3. **Build the TypeScript once per server.**
-   ```powershell
-   cd C:|-- LICENSE `n`-- README.md Tools|-- LICENSE `n`-- README.md custom-mcp-servers|-- LICENSE `n`-- README.md curl
-   npm run build
-   # Repeat for dice-roll, easy-view, and file-download
+   ```bash
+   for dir in curl dice-roll easy-view file-download osrs-lookup; do
+     (cd "$dir" && npm run build)
+   done
    ```
-   The command generates `dist/server.js`, which is the entry point you register with MCP clients.
+   Each build generates `dist/server.js`, which is the entry point you register with MCP clients.
 
 4. **Run a server locally (manual verification).**
    ```powershell
@@ -98,6 +102,11 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "command": "node",
          "args": ["C:/Tools/custom-mcp-servers/file-download/dist/server.js"],
          "workingDirectory": "C:/Tools/custom-mcp-servers/file-download"
+       },
+       "osrs-lookup": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/osrs-lookup/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/osrs-lookup"
        }
      }
    }
@@ -129,7 +138,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
 **Usage tips**
 - `curl_list` shows truncated IDs (first 8 characters); pass the full UUID to `curl_show` or `curl_clear`.
 - Set `body_lines: 0` when calling `curl_show` to stream the whole payload if you are comfortable with the token cost.
-- Provide headers as a JSON object (for example, `{ "Authorization": "Bearer …" }`).
+- Provide headers as a JSON object (for example, `{ "Authorization": "Bearer <token>" }`).
 - If you see `curl` command errors, verify the executable is in your `PATH` or supply absolute URLs.
 
 ### dice-roll - Gaming Dice Simulator
@@ -137,7 +146,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - **Purpose:** Provide predictable, validated dice rolls for tabletop or gaming scenarios.
 - **Key behaviours:**
   - Validates side counts (2-1000) and roll counts (1-20) to stop runaway requests.
-  - Uses cryptographically secure randomness provided by Node's `Math.random`? Actually default. Node's `Math.random` is not cryptographically secure, but unstoppable? Should we mention? Wait is `Math.random` used? Check code: uses `Math.floor(Math.random() * ...)` - that's not cryptographically secure. Should mention "pseudo-random" or "Math.random" to avoid misrepresenting as cryptographically secure. So we should say "Uses Node's Math.random (sufficient for casual use, not cryptographically secure)". 
+  - Uses Node's `Math.random`, which is fine for casual use but not cryptographically secure.
   - Formats output with total, individual rolls, and percentile support (00-99 by rolling two d10s).
 
 | Tool | Purpose | Required arguments | Optional arguments / defaults |
@@ -181,7 +190,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - **Path:** `file-download/`
 - **Purpose:** Provide a safe place for MCP assistants to persist generated files to the user's machine under `~/.claude/downloads`.
 - **Key behaviours:**
-  - Creates the downloads directory lazily (`~/.claude/downloads`) and reuses it across sessions. On Windows this resolves to `%USERPROFILE%|-- LICENSE `n`-- README.md .claude|-- LICENSE `n`-- README.md downloads`.
+  - Creates the downloads directory lazily (`~/.claude/downloads`) and reuses it across sessions. On Windows this resolves to `%USERPROFILE%\.claude\downloads`.
   - Sanitises filenames to block path traversal, reserved characters, and leading dots before writing.
   - Supports both UTF-8 text saves and arbitrary binary blobs supplied as base64.
   - Offers listing and deletion helpers so the assistant can manage its outputs explicitly.
@@ -198,6 +207,27 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - Supply only the intended filename; directories are not permitted and will be flattened during sanitisation.
 - `save_binary_file` rejects invalid base64 strings - validate data before sending.
 - Use `list_downloads` to confirm the file landed as expected before instructing a user to open it.
+
+### osrs-lookup - Old School RuneScape Lookup
+- **Path:** `osrs-lookup/`
+- **Purpose:** Query Old School RuneScape (OSRS) public APIs for Grand Exchange and player highscore data directly from an assistant session.
+- **Key behaviours:**
+  - Wraps the official OSRS endpoints for item categories, item search, detailed listings, price history, and player highscores.
+  - Normalises request parameters and validates required inputs (for example, `item_id` and `player_name`) before calling the APIs.
+  - Returns structured JSON with parsed values (current price, daily averages, skill ranks) so assistants can reason about the results without additional parsing.
+
+| Tool | Purpose | Required arguments | Optional arguments / defaults |
+| ---- | ------- | ------------------ | ----------------------------- |
+| `ge_category` | List item counts by starting letter for a Grand Exchange category. | None | `category` (`1` for OSRS by default) |
+| `ge_item_detail` | Retrieve detailed price and trend information for a specific item. | `item_id` (number) | None |
+| `ge_items_search` | Page through catalogue items filtered by category and starting letter. | `alpha` (string) | `category` (`1`), `page` (`1`) |
+| `ge_price_graph` | Fetch 180-day price history data for charting or analysis. | `item_id` (number) | None |
+| `player_highscore` | Fetch a player's skill levels, experience, and activity ranks. | `player_name` (string) | None |
+
+**Usage tips**
+- URL-encode player names before passing them if they contain spaces; the server takes care of the rest.
+- Use `ge_category` first to discover available item IDs, then drill down with `ge_item_detail` or `ge_price_graph`.
+- Highscore lookups require exact display names; check spelling if you see `HTTP 404` responses.
 
 ## Development Workflow
 - Run `npm run dev` for quick experiments; it uses `ts-node` so TypeScript changes take effect immediately (restart the process after edits).
