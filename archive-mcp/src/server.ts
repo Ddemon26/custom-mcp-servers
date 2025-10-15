@@ -88,7 +88,7 @@ async function createZip(
       zlib: { level: compressionLevel },
     });
 
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       output.on('close', () => {
         resolve(JSON.stringify({
           success: true,
@@ -105,14 +105,18 @@ async function createZip(
       archive.pipe(output);
 
       // Add files/directories to archive
-      for (const source of sources) {
-        stat(source).then(async (stats) => {
+      try {
+        for (const source of sources) {
+          const stats = await stat(source);
           if (stats.isDirectory()) {
             archive.directory(source, basename(source));
           } else {
             archive.file(source, { name: basename(source) });
           }
-        }).catch(reject);
+        }
+      } catch (error) {
+        reject(error);
+        return;
       }
 
       archive.finalize();
