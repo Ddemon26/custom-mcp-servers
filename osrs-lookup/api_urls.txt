@@ -1,0 +1,10 @@
+## GRAND EXCHANGE API
+
+https://services.runescape.com/m=itemdb_oldschool/api/catalogue/category.json?category=9,
+https://services.runescape.com/m=itemdb_oldschool/api/catalogue/category.json?category=X
+https://services.runescape.com/m=itemdb_oldschool/api/catalogue/detail.json?item=21787,
+https://services.runescape.com/m=itemdb_oldschool/api/catalogue/detail.json?item=X
+https://services.runescape.com/m=itemdb_oldschool/api/catalogue/items.json?category=9&alpha=c&page=1,
+https://services.runescape.com/m=itemdb_oldschool/api/catalogue/items.json?category=X&alpha=Y&page=Z
+https://services.runescape.com/m=itemdb_oldschool/api/graph/21787.json,
+https://services.runescape.com/m=itemdb_oldschool/api/graph/X.json

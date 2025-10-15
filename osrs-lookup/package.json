@@ -1,0 +1,40 @@
+{
+  "name": "@damonxd/mcp-runescape-lookup",
+  "version": "1.0.0",
+  "description": "MCP server for Old School RuneScape Grand Exchange and player highscores lookup",
+  "type": "module",
+  "main": "dist/server.js",
+  "bin": {
+    "mcp-runescape-lookup": "./dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "dev": "ts-node --esm src/server.ts",
+    "start": "node dist/server.js",
+    "clean": "shx rm -rf dist",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "runescape",
+    "osrs",
+    "oldschool",
+    "grand-exchange",
+    "highscores",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "shx": "^0.3.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
