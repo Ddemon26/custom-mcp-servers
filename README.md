@@ -14,6 +14,7 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
   - [dice-roll - Gaming Dice Simulator](#dice-roll--gaming-dice-simulator)
   - [easy-view - Read-Only Workspace Explorer](#easy-view--read-only-workspace-explorer)
   - [file-download - Persistent Download Sink](#file-download--persistent-download-sink)
+  - [ffmpeg-mcp - Media Processing Toolkit](#ffmpeg-mcp--media-processing-toolkit)
   - [json-mcp - Structured Data Toolkit](#json-mcp--structured-data-toolkit)
   - [markdown-mcp - Markdown Utilities](#markdown-mcp--markdown-utilities)
   - [osrs-lookup - Old School RuneScape Lookup](#osrs-lookup--old-school-runescape-lookup)
@@ -24,7 +25,7 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
 
 ## Overview
 - Each server is self-contained (its own `package.json`, `src`, and compiled `dist` output) so you can build, deploy, or version them independently.
-- Tooling covers HTTP inspection, browser automation, archive management, dice rolling, read-only codebase exploration, controlled file download management, structured data conversions (JSON/YAML/XML), Markdown analysis, Old School RuneScape data lookups, and timezone utilities.
+- Tooling covers HTTP inspection, browser automation, archive management, FFmpeg-powered media editing, dice rolling, read-only codebase exploration, controlled file download management, structured data conversions (JSON/YAML/XML), Markdown analysis, Old School RuneScape data lookups, and timezone utilities.
 - All servers log operational details to stderr to keep stdout clean for MCP responses.
 - Distributed under the MIT license for unrestricted commercial and personal use.
 
@@ -92,6 +93,10 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/file-download/src/server.js"]
        },
+       "ffmpeg-mcp": {
+         "command": "node",
+         "args": ["/your/path/to/custom-mcp-servers/ffmpeg-mcp/src/server.js"]
+       },
        "json-mcp": {
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/json-mcp/src/server.js"]
@@ -114,7 +119,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
    - Use forward slashes in JSON to avoid escaping backslashes.
    - Ensure the working directory matches the project root so relative paths (for example, the easy-view index) resolve correctly.
 3. **Restart the client** so it reloads the MCP configuration.
-4. **Invoke tools by name** inside your client (`navigate`, `create_zip`, `curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `format_json`, `markdown_to_html`, `get_current_time`, etc.). The server responses appear in the assistant panel.
+4. **Invoke tools by name** inside your client (`navigate`, `create_zip`, `convert_video`, `curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `format_json`, `markdown_to_html`, `get_current_time`, etc.). The server responses appear in the assistant panel.
 
 ## Server Reference
 
@@ -260,6 +265,37 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - Supply only the intended filename; directories are not permitted and will be flattened during sanitisation.
 - `save_binary_file` rejects invalid base64 strings - validate data before sending.
 - Use `list_downloads` to confirm the file landed as expected before instructing a user to open it.
+
+### ffmpeg-mcp - Media Processing Toolkit
+- **Path:** `ffmpeg-mcp/`
+- **Purpose:** Perform advanced video and audio processing using the system-installed FFmpeg binary.
+- **Key behaviours:**
+  - Verifies FFmpeg availability before each operation and surfaces stderr output on failures.
+  - Supports format conversion, compression, trimming, resizing, merging, watermarking, subtitle burn-in, speed changes, and batch processing.
+  - Creates output directories on demand and normalises time parameters (HH:MM:SS or seconds).
+
+| Tool | Purpose | Required arguments | Optional arguments / defaults |
+| ---- | ------- | ------------------ | ----------------------------- |
+| `get_media_info` | Return codec, duration, and stream metadata. | `inputPath` (string) | None |
+| `convert_video` | Convert a video to another format/codec. | `inputPath`, `outputPath` | `format`, `quality`, `videoCodec`, `audioCodec`, `extraArgs` |
+| `extract_audio` | Strip audio from a video into a standalone file. | `inputPath`, `outputPath` | `audioCodec`, `bitrate` |
+| `compress_video` | Re-encode with CRF/preset for smaller files. | `inputPath`, `outputPath` | `crf`, `preset`, `twoPass` |
+| `trim_video` | Cut a clip by start time and duration. | `inputPath`, `outputPath` | `startTime`, `duration`, `copy` |
+| `resize_video` | Scale video to preset or custom dimensions. | `inputPath`, `outputPath` | `preset`, `width`, `height`, `forceAspect` |
+| `merge_videos` | Concatenate multiple clips. | `inputPaths` (JSON array), `outputPath` | `copy` |
+| `add_audio_to_video` | Replace or mix audio track in a video. | `inputVideo`, `inputAudio`, `outputPath` | `replace` |
+| `extract_frames` | Export still frames to an image sequence. | `inputPath`, `outputDir` | `format`, `fps`, `startTime`, `duration` |
+| `create_gif` | Generate an animated GIF with palette optimisation. | `inputPath`, `outputPath` | `startTime`, `duration`, `fps`, `width` |
+| `add_watermark` | Overlay an image watermark. | `inputPath`, `watermarkPath`, `outputPath` | `position`, `opacity`, `offsetX`, `offsetY` |
+| `adjust_speed` | Change playback speed (0.1x–4x). | `inputPath`, `outputPath`, `speed` | None |
+| `rotate_video` | Rotate or flip footage. | `inputPath`, `outputPath`, `mode` | None |
+| `add_subtitles` | Burn-in or embed subtitle files. | `inputPath`, `subtitlePath`, `outputPath` | `burnIn` |
+| `batch_convert` | Convert multiple files in one request. | `inputPaths` (JSON array), `outputDir` | `outputFormat`, `quality`, `extraArgs` |
+
+**Usage tips**
+- Ensure FFmpeg (and ffprobe) is installed and discoverable via `PATH` before invoking these tools.
+- Provide Windows paths with escaped backslashes in JSON (e.g., `C:\\videos\\clip.mp4`).
+- Long-running operations block until FFmpeg finishes; stream progress to stderr if you need status updates.
 
 ### json-mcp - Structured Data Toolkit
 - **Path:** `json-mcp/`
