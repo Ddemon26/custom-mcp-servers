@@ -13,16 +13,30 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
   - [dice-roll - Gaming Dice Simulator](#dice-roll--gaming-dice-simulator)
   - [easy-view - Read-Only Workspace Explorer](#easy-view--read-only-workspace-explorer)
   - [file-download - Persistent Download Sink](#file-download--persistent-download-sink)
+  - [json-mcp - Structured Data Toolkit](#json-mcp--structured-data-toolkit)
+  - [markdown-mcp - Markdown Utilities](#markdown-mcp--markdown-utilities)
   - [osrs-lookup - Old School RuneScape Lookup](#osrs-lookup--old-school-runescape-lookup)
+  - [time - Time Zone Utilities](#time--time-zone-utilities)
 - [Development Workflow](#development-workflow)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
 ## Overview
 - Each server is self-contained (its own `package.json`, `src`, and compiled `dist` output) so you can build, deploy, or version them independently.
-- Tooling covers HTTP inspection, dice rolling, read-only codebase exploration, controlled file download management, and Old School RuneScape data lookups.
+- Tooling covers HTTP inspection, dice rolling, read-only codebase exploration, controlled file download management, structured data conversions (JSON/YAML/XML), Markdown analysis, Old School RuneScape data lookups, and timezone utilities.
 - All servers log operational details to stderr to keep stdout clean for MCP responses.
 - Distributed under the MIT license for unrestricted commercial and personal use.
+
+## Repository Layout
+- `curl/` - HTTP request workbench backed by the local `curl` binary.
+- `dice-roll/` - Dice roller with standard notation parsing.
+- `easy-view/` - Read-only workspace explorer for safe file inspection.
+- `file-download/` - Persistent download sink rooted in `~/.claude/downloads`.
+- `json-mcp/` - Structured data toolkit for JSON, YAML, and XML validation and conversion.
+- `markdown-mcp/` - Markdown formatter, validator, and content extractor.
+- `osrs-lookup/` - Old School RuneScape Grand Exchange and highscore lookup tools.
+- `time/` - Timezone helpers for fetching current times and converting between regions.
+- `.github/workflows/` - Release automation that packages each server per tag.
 
 ## Prerequisites
 - Node.js 18 LTS or newer (ships with npm 9+). Earlier runtimes may lack modern ECMAScript APIs used by `@modelcontextprotocol/sdk`.
@@ -38,13 +52,29 @@ A collection of production-ready Model Context Protocol (MCP) servers written in
    cd custom-mcp-servers
    ```
 
-2. **Run a server locally (manual verification).**
+2. **Install dependencies per server.** Each server is an independent Node project.
+   ```bash
+   for dir in curl dice-roll easy-view file-download json-mcp markdown-mcp osrs-lookup time; do
+     (cd "$dir" && npm install)
+   done
+   ```
+   Rerun the loop whenever `package.json` files change.
+
+3. **Build the TypeScript once per server.**
+   ```bash
+   for dir in curl dice-roll easy-view file-download json-mcp markdown-mcp osrs-lookup time; do
+     (cd "$dir" && npm run build)
+   done
+   ```
+   Each build emits `dist/server.js`, which is the entry point you register with MCP clients.
+
+4. **Run a server locally (manual verification).**
    ```powershell
    npm run start
    ```
    The process binds stdio and will wait for requests from an MCP client. Stop with `Ctrl+C` after confirming the build.
 
-3. **(Optional) Use live reload while iterating.**
+5. **(Optional) Use live reload while iterating.**
    ```powershell
    npm run dev
    ```
@@ -59,33 +89,53 @@ All servers speak MCP over stdio. You typically register them in your client's c
    ```jsonc
    {
      "mcpServers": {
-    "curl": {
-      "command": "node",
-      "args": ["/your/path/to/custom-mcp-servers/curl/src/server.js"]
-    },
-    "dice-roll": {
-      "command": "node",
-      "args": ["/your/path/to/custom-mcp-servers/dice-roll/src/server.js"]
-    },
-    "easy-view": {
-      "command": "node",
-      "args": ["/your/path/to/custom-mcp-servers/easy-view/src/server.js"]
-    },
-    "file-download": {
-      "command": "node",
-      "args": ["/your/path/to/custom-mcp-servers/file-download/src/server.js"]
-    },
-    "osrs-lookup": {
-      "command": "node",
-      "args": ["/your/path/to/custom-mcp-servers/osrs-lookup/src/server.js"]
-        }
-      }
+       "curl": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/curl/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/curl"
+       },
+       "dice-roll": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/dice-roll/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/dice-roll"
+       },
+       "easy-view": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/easy-view/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/easy-view"
+       },
+       "file-download": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/file-download/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/file-download"
+       },
+       "json-mcp": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/json-mcp/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/json-mcp"
+       },
+       "markdown-mcp": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/markdown-mcp/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/markdown-mcp"
+       },
+       "osrs-lookup": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/osrs-lookup/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/osrs-lookup"
+       },
+       "time": {
+         "command": "node",
+         "args": ["C:/Tools/custom-mcp-servers/time/dist/server.js"],
+         "workingDirectory": "C:/Tools/custom-mcp-servers/time"
+       }
+     }
    }
    ```
    - Use forward slashes in JSON to avoid escaping backslashes.
    - Ensure the working directory matches the project root so relative paths (for example, the easy-view index) resolve correctly.
 3. **Restart the client** so it reloads the MCP configuration.
-4. **Invoke tools by name** inside your client (`curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, etc.). The server responses appear in the assistant panel.
+4. **Invoke tools by name** inside your client (`curl_execute`, `roll_d100`, `scan_directory`, `save_text_file`, `format_json`, `markdown_to_html`, `get_current_time`, etc.). The server responses appear in the assistant panel.
 
 ## Server Reference
 
@@ -179,6 +229,56 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - `save_binary_file` rejects invalid base64 strings - validate data before sending.
 - Use `list_downloads` to confirm the file landed as expected before instructing a user to open it.
 
+### json-mcp - Structured Data Toolkit
+- **Path:** `json-mcp/`
+- **Purpose:** Validate, query, and transform structured data across JSON, YAML, and XML formats.
+- **Key behaviours:**
+  - Uses Ajv for JSON Schema validation and returns detailed error metadata.
+  - Supports JSONPath queries plus bidirectional conversions between JSON, YAML, and XML.
+  - Provides diff and deep-merge helpers for comparing or combining payloads safely.
+
+| Tool | Purpose | Required arguments | Optional arguments / defaults |
+| ---- | ------- | ------------------ | ----------------------------- |
+| `format_json` | Prettify JSON with configurable indentation. | `data` (string) | `indent` (`2`) |
+| `validate_json` | Check whether a string parses as JSON. | `data` (string) | None |
+| `jsonpath_query` | Execute a JSONPath expression against JSON text. | `data` (string), `path` (string) | None |
+| `validate_schema` | Validate JSON data against a JSON Schema. | `data` (string), `schema` (string) | None |
+| `yaml_to_json` | Convert YAML to JSON. | `yaml` (string) | `indent` (`2`) |
+| `json_to_yaml` | Convert JSON to YAML. | `json` (string) | None |
+| `xml_to_json` | Convert XML to JSON. | `xml` (string) | `indent` (`2`) |
+| `json_to_xml` | Convert JSON to formatted XML. | `json` (string) | `rootName` (`"root"`) |
+| `json_merge` | Deep merge two JSON objects. | `json1` (string), `json2` (string) | `indent` (`2`) |
+| `json_diff` | Report differences between JSON objects. | `json1` (string), `json2` (string) | None |
+
+**Usage tips**
+- Supply compact JSON strings; the server handles parsing before formatting.
+- When validating schemas, provide both the instance and schema as JSON strings.
+- `json_diff` returns `null` when documents match exactly—treat that as "no differences".
+
+### markdown-mcp - Markdown Utilities
+- **Path:** `markdown-mcp/`
+- **Purpose:** Convert, format, and extract structure from Markdown documents.
+- **Key behaviours:**
+  - Leverages `marked`, `turndown`, and the Remark ecosystem for reliable Markdown ↔ HTML conversions.
+  - Normalises headings, lists, code fences, and emphasis for consistent formatting output.
+  - Surfaces document structure by extracting headings, links, images, and table-of-contents markdown.
+
+| Tool | Purpose | Required arguments | Optional arguments / defaults |
+| ---- | ------- | ------------------ | ----------------------------- |
+| `markdown_to_html` | Render Markdown to HTML. | `markdown` (string) | None |
+| `html_to_markdown` | Convert HTML back to Markdown. | `html` (string) | None |
+| `format_markdown` | Reformat Markdown with standard conventions. | `markdown` (string) | None |
+| `extract_headers` | List headings with their levels. | `markdown` (string) | None |
+| `extract_links` | Enumerate links found in the document. | `markdown` (string) | None |
+| `extract_images` | Enumerate images with alt text. | `markdown` (string) | None |
+| `extract_toc` | Generate a Markdown table of contents. | `markdown` (string) | `maxDepth` (`3`) |
+| `validate_markdown` | Check syntax and highlight common issues. | `markdown` (string) | None |
+
+**Usage tips**
+- `extract_toc` filters headings deeper than `maxDepth`; raise it when you need full depth.
+- Formatting preserves GitHub Flavoured Markdown extensions (tables, strikethrough, task lists).
+- Validation warnings include missing URLs or alt text—surface them to users for cleanup.
+
 ### osrs-lookup - Old School RuneScape Lookup
 - **Path:** `osrs-lookup/`
 - **Purpose:** Query Old School RuneScape (OSRS) public APIs for Grand Exchange and player highscore data directly from an assistant session.
@@ -199,6 +299,24 @@ All servers speak MCP over stdio. You typically register them in your client's c
 - URL-encode player names before passing them if they contain spaces; the server takes care of the rest.
 - Use `ge_category` first to discover available item IDs, then drill down with `ge_item_detail` or `ge_price_graph`.
 - Highscore lookups require exact display names; check spelling if you see `HTTP 404` responses.
+
+### time - Time Zone Utilities
+- **Path:** `time/`
+- **Purpose:** Fetch current times or convert between timezones using IANA zone names.
+- **Key behaviours:**
+  - Detects the host timezone via `Intl` and validates all inputs against the IANA database.
+  - Uses Luxon to respect daylight-saving boundaries when performing conversions.
+  - Returns structured metadata including day of week and DST state for both source and target zones.
+
+| Tool | Purpose | Required arguments | Optional arguments / defaults |
+| ---- | ------- | ------------------ | ----------------------------- |
+| `get_current_time` | Return the current time in a timezone. | `timezone` (string) | None |
+| `convert_time` | Translate a HH:MM timestamp between zones. | `source_timezone` (string), `time` (string), `target_timezone` (string) | None |
+
+**Usage tips**
+- Provide 24-hour `HH:MM` inputs for conversions; seconds default to `00`.
+- Use canonical IANA names such as `America/New_York`—abbreviations like `EST` are rejected.
+- The conversion response includes the offset delta (e.g., `+5h`) for quick reference.
 
 ## Development Workflow
 - Run `npm run dev` for quick experiments; it uses `ts-node` so TypeScript changes take effect immediately (restart the process after edits).
