@@ -8,13 +8,10 @@ import {
   McpError,
   ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { spawn } from "child_process";
 import { stat, mkdir } from "fs/promises";
 import { dirname, join, basename } from "path";
 import { homedir } from "os";
-
-const execAsync = promisify(exec);
 
 // Tool name constants
 const YtDlpTools = {
@@ -30,10 +27,42 @@ const YtDlpTools = {
   EXTRACT_CHAPTERS: "extract_chapters",
 } as const;
 
+async function runProcess(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString("utf8");
+    });
+
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString("utf8");
+    });
+
+    child.on("error", (error) => {
+      reject(error);
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        const error: any = new Error(`${command} exited with code ${code}`);
+        error.stdout = stdout;
+        error.stderr = stderr;
+        error.code = code;
+        reject(error);
+      }
+    });
+  });
+}
+
 // Helper function to check if yt-dlp is available
 async function checkYtDlpAvailable(): Promise<boolean> {
   try {
-    await execAsync("yt-dlp --version");
+    await runProcess("yt-dlp", ["--version"]);
     return true;
   } catch {
     return false;
@@ -75,8 +104,7 @@ function formatDuration(seconds: number): string {
 // Get video information
 async function getVideoInfo(url: string): Promise<string> {
   try {
-    const command = `yt-dlp --dump-json --no-playlist "${url}"`;
-    const { stdout } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await runProcess("yt-dlp", ["--dump-json", "--no-playlist", url]);
     const info = JSON.parse(stdout);
 
     const result = {
@@ -131,9 +159,14 @@ async function downloadVideo(
     }
 
     const outputTemplate = join(outputDir, "%(title)s.%(ext)s");
-    const command = `yt-dlp -f "${formatString}" --no-playlist -o "${outputTemplate}" "${url}"`;
+    const args = [
+      "-f", formatString,
+      "--no-playlist",
+      "-o", outputTemplate,
+      url,
+    ];
 
-    const { stdout, stderr } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout, stderr } = await runProcess("yt-dlp", args);
 
     // Extract filename from output
     const downloadMatch = stdout.match(/\[download\] Destination: (.+)/);
@@ -164,9 +197,16 @@ async function downloadAudio(
     await ensureDir(outputDir);
 
     const outputTemplate = join(outputDir, "%(title)s.%(ext)s");
-    const command = `yt-dlp -x --audio-format ${format} --audio-quality ${quality}K --no-playlist -o "${outputTemplate}" "${url}"`;
+    const args = [
+      "-x",
+      "--audio-format", format,
+      "--audio-quality", `${quality}K`,
+      "--no-playlist",
+      "-o", outputTemplate,
+      url,
+    ];
 
-    const { stdout } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await runProcess("yt-dlp", args);
 
     // Extract filename from output
     const downloadMatch = stdout.match(/\[ExtractAudio\] Destination: (.+)/);
@@ -202,14 +242,17 @@ async function downloadPlaylist(
       ? "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
       : `bestvideo[height<=${quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${quality}]`;
 
-    const playlistItems = startIndex && endIndex
-      ? `--playlist-start ${startIndex} --playlist-end ${endIndex}`
-      : "";
-
     const outputTemplate = join(outputDir, "%(playlist_index)s - %(title)s.%(ext)s");
-    const command = `yt-dlp -f "${formatString}" ${playlistItems} -o "${outputTemplate}" "${url}"`;
+    const args = ["-f", formatString];
+    if (typeof startIndex === "number") {
+      args.push("--playlist-start", String(startIndex));
+    }
+    if (typeof endIndex === "number") {
+      args.push("--playlist-end", String(endIndex));
+    }
+    args.push("-o", outputTemplate, url);
 
-    const { stdout } = await execAsync(command, { maxBuffer: 20 * 1024 * 1024 });
+    const { stdout } = await runProcess("yt-dlp", args);
 
     // Count downloaded files
     const downloadedCount = (stdout.match(/\[download\] Destination:/g) || []).length;
@@ -231,8 +274,7 @@ async function downloadPlaylist(
 // List available formats
 async function listFormats(url: string): Promise<string> {
   try {
-    const command = `yt-dlp -F --no-playlist "${url}"`;
-    const { stdout } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await runProcess("yt-dlp", ["-F", "--no-playlist", url]);
 
     // Parse the format list
     const lines = stdout.split("\n");
@@ -273,11 +315,20 @@ async function downloadSubtitles(
   try {
     await ensureDir(outputDir);
 
-    const autoGenFlag = autoGenerated ? "--write-auto-sub" : "";
     const outputTemplate = join(outputDir, "%(title)s.%(ext)s");
-    const command = `yt-dlp --write-sub --sub-lang ${languages} ${autoGenFlag} --skip-download --no-playlist -o "${outputTemplate}" "${url}"`;
+    const args = [
+      "--write-sub",
+      "--sub-lang", languages,
+      "--skip-download",
+      "--no-playlist",
+      "-o", outputTemplate,
+      url,
+    ];
+    if (autoGenerated) {
+      args.splice(3, 0, "--write-auto-sub");
+    }
 
-    const { stdout } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await runProcess("yt-dlp", args);
 
     return JSON.stringify({
       success: true,
@@ -303,9 +354,16 @@ async function downloadThumbnail(
     await ensureDir(outputDir);
 
     const outputTemplate = join(outputDir, "%(title)s.%(ext)s");
-    const command = `yt-dlp --write-thumbnail --skip-download --convert-thumbnails ${format} --no-playlist -o "${outputTemplate}" "${url}"`;
+    const args = [
+      "--write-thumbnail",
+      "--skip-download",
+      "--convert-thumbnails", format,
+      "--no-playlist",
+      "-o", outputTemplate,
+      url,
+    ];
 
-    const { stdout } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await runProcess("yt-dlp", args);
 
     return JSON.stringify({
       success: true,
@@ -327,8 +385,7 @@ async function searchVideos(
 ): Promise<string> {
   try {
     const searchQuery = `ytsearch${maxResults}:${query}`;
-    const command = `yt-dlp --dump-json --flat-playlist "${searchQuery}"`;
-    const { stdout } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await runProcess("yt-dlp", ["--dump-json", "--flat-playlist", searchQuery]);
 
     // Parse JSON lines
     const results = stdout.trim().split("\n").map(line => {
@@ -368,13 +425,20 @@ async function downloadChannel(
   try {
     await ensureDir(outputDir);
 
-    const maxDownloadsArg = maxDownloads ? `--max-downloads ${maxDownloads}` : "";
-    const dateAfterArg = dateAfter ? `--dateafter ${dateAfter}` : "";
-
     const outputTemplate = join(outputDir, "%(upload_date)s - %(title)s.%(ext)s");
-    const command = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" ${maxDownloadsArg} ${dateAfterArg} -o "${outputTemplate}" "${channelUrl}"`;
+    const args = [
+      "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best",
+      "-o", outputTemplate,
+    ];
+    if (typeof maxDownloads === "number") {
+      args.push("--max-downloads", String(maxDownloads));
+    }
+    if (dateAfter) {
+      args.push("--dateafter", dateAfter);
+    }
+    args.push(channelUrl);
 
-    const { stdout } = await execAsync(command, { maxBuffer: 20 * 1024 * 1024 });
+    const { stdout } = await runProcess("yt-dlp", args);
 
     const downloadedCount = (stdout.match(/\[download\] Destination:/g) || []).length;
 
@@ -394,8 +458,7 @@ async function downloadChannel(
 // Extract chapter information
 async function extractChapters(url: string): Promise<string> {
   try {
-    const command = `yt-dlp --dump-json --no-playlist "${url}"`;
-    const { stdout } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await runProcess("yt-dlp", ["--dump-json", "--no-playlist", url]);
     const info = JSON.parse(stdout);
 
     const chapters = info.chapters || [];

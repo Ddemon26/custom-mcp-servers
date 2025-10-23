@@ -8,13 +8,10 @@ import {
   McpError,
   ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
-import { exec } from "child_process";
-import { promisify } from "util";
-import { stat, mkdir, readFile } from "fs/promises";
+import { spawn } from "child_process";
+import { stat, mkdir, readFile, writeFile, unlink } from "fs/promises";
 import { dirname, join, extname, basename } from "path";
 import { existsSync } from "fs";
-
-const execAsync = promisify(exec);
 
 // Tool name constants
 const FFmpegTools = {
@@ -35,10 +32,53 @@ const FFmpegTools = {
   BATCH_CONVERT: "batch_convert",
 } as const;
 
+async function runProcess(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString('utf8');
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString('utf8');
+    });
+
+    child.on('error', (error) => {
+      reject(error);
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        const error: any = new Error(`${command} exited with code ${code}`);
+        error.stdout = stdout;
+        error.stderr = stderr;
+        error.code = code;
+        reject(error);
+      }
+    });
+  });
+}
+
+async function execFFmpeg(args: string[]): Promise<{ stdout: string; stderr: string }> {
+  try {
+    return await runProcess("ffmpeg", args);
+  } catch (error: any) {
+    const stderr = error?.stderr || error?.message || "Unknown FFmpeg error";
+    const wrapped: any = new Error(`FFmpeg error: ${stderr}`);
+    wrapped.stderr = stderr;
+    throw wrapped;
+  }
+}
+
 // Helper function to check if FFmpeg is available
 async function checkFFmpegAvailable(): Promise<boolean> {
   try {
-    await execAsync("ffmpeg -version");
+    await runProcess("ffmpeg", ["-version"]);
     return true;
   } catch {
     return false;
@@ -92,18 +132,6 @@ function parseTimeString(timeStr: string): string {
   return timeStr;
 }
 
-// Helper function to execute FFmpeg command
-async function execFFmpeg(command: string): Promise<{ stdout: string; stderr: string }> {
-  try {
-    const result = await execAsync(command);
-    return result;
-  } catch (error: any) {
-    // FFmpeg outputs to stderr even on success, so check for actual errors
-    const stderr = error.stderr || error.message;
-    throw new Error(`FFmpeg error: ${stderr}`);
-  }
-}
-
 // Get media file information using ffprobe
 async function getMediaInfo(inputPath: string): Promise<string> {
   try {
@@ -111,8 +139,15 @@ async function getMediaInfo(inputPath: string): Promise<string> {
       throw new Error(`File not found: ${inputPath}`);
     }
 
-    const command = `ffprobe -v quiet -print_format json -show_format -show_streams "${inputPath}"`;
-    const { stdout } = await execAsync(command);
+    const { stdout } = await runProcess("ffprobe", [
+      "-v",
+      "quiet",
+      "-print_format",
+      "json",
+      "-show_format",
+      "-show_streams",
+      inputPath,
+    ]);
     const info = JSON.parse(stdout);
 
     const format = info.format || {};
@@ -172,8 +207,14 @@ async function convertVideo(
     const acodec = audioCodec || (ext === ".webm" ? "libopus" : "aac");
     const crf = quality || "23"; // 23 is default quality
 
-    const command = `ffmpeg -i "${inputPath}" -c:v ${vcodec} -crf ${crf} -c:a ${acodec} -y "${outputPath}"`;
-    await execFFmpeg(command);
+    const args = [
+      "-i", inputPath,
+      "-c:v", vcodec,
+      "-crf", crf,
+      "-c:a", acodec,
+      "-y", outputPath,
+    ];
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
@@ -218,9 +259,12 @@ async function extractAudio(
       }
     }
 
-    const bitrateArg = bitrate ? `-b:a ${bitrate}` : "";
-    const command = `ffmpeg -i "${inputPath}" -vn -c:a ${codec} ${bitrateArg} -y "${outputPath}"`;
-    await execFFmpeg(command);
+    const args = ["-i", inputPath, "-vn", "-c:a", codec];
+    if (bitrate) {
+      args.push("-b:a", bitrate);
+    }
+    args.push("-y", outputPath);
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
@@ -254,8 +298,16 @@ async function compressVideo(
 
     // CRF: 0-51, where 0 is lossless, 23 is default, 51 is worst quality
     const crfValue = Math.max(0, Math.min(51, crf));
-    const command = `ffmpeg -i "${inputPath}" -c:v libx264 -crf ${crfValue} -preset ${preset} -c:a aac -b:a 128k -y "${outputPath}"`;
-    await execFFmpeg(command);
+    const args = [
+      "-i", inputPath,
+      "-c:v", "libx264",
+      "-crf", String(crfValue),
+      "-preset", preset,
+      "-c:a", "aac",
+      "-b:a", "128k",
+      "-y", outputPath,
+    ];
+    await execFFmpeg(args);
 
     const inputStats = await stat(inputPath);
     const outputStats = await stat(outputPath);
@@ -294,16 +346,16 @@ async function trimVideo(
     await ensureDir(dirname(outputPath));
 
     const start = parseTimeString(startTime);
-    let durationArg = "";
+    const args = ["-i", inputPath, "-ss", start];
 
     if (duration) {
-      durationArg = `-t ${parseTimeString(duration)}`;
+      args.push("-t", parseTimeString(duration));
     } else if (endTime) {
-      durationArg = `-to ${parseTimeString(endTime)}`;
+      args.push("-to", parseTimeString(endTime));
     }
 
-    const command = `ffmpeg -i "${inputPath}" -ss ${start} ${durationArg} -c copy -y "${outputPath}"`;
-    await execFFmpeg(command);
+    args.push("-c", "copy", "-y", outputPath);
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
@@ -356,8 +408,13 @@ async function resizeVideo(
       throw new Error("Either width, height, or preset must be specified");
     }
 
-    const command = `ffmpeg -i "${inputPath}" -vf "${scale}" -c:a copy -y "${outputPath}"`;
-    await execFFmpeg(command);
+    const args = [
+      "-i", inputPath,
+      "-vf", scale,
+      "-c:a", "copy",
+      "-y", outputPath,
+    ];
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
@@ -394,18 +451,19 @@ async function mergeVideos(
     const fileListPath = join(dirname(outputPath), `filelist_${Date.now()}.txt`);
     const fileListContent = inputPaths.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
 
-    // Write file list (we'll use execAsync to write it via echo)
-    const writeCommand = process.platform === "win32"
-      ? `echo ${fileListContent.replace(/\n/g, " & echo ")} > "${fileListPath}"`
-      : `echo "${fileListContent}" > "${fileListPath}"`;
+    await writeFile(fileListPath, fileListContent, "utf8");
 
-    await execAsync(writeCommand);
-
-    const command = `ffmpeg -f concat -safe 0 -i "${fileListPath}" -c copy -y "${outputPath}"`;
-    await execFFmpeg(command);
+    const args = [
+      "-f", "concat",
+      "-safe", "0",
+      "-i", fileListPath,
+      "-c", "copy",
+      "-y", outputPath,
+    ];
+    await execFFmpeg(args);
 
     // Clean up temp file
-    await execAsync(process.platform === "win32" ? `del "${fileListPath}"` : `rm "${fileListPath}"`);
+    await unlink(fileListPath).catch(() => {});
 
     const stats = await stat(outputPath);
 
@@ -440,14 +498,33 @@ async function addAudioToVideo(
 
     await ensureDir(dirname(outputPath));
 
-    let command: string;
+    let args: string[];
     if (replaceAudio) {
-      command = `ffmpeg -i "${videoPath}" -i "${audioPath}" -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest -y "${outputPath}"`;
+      args = [
+        "-i", videoPath,
+        "-i", audioPath,
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-map", "0:v:0",
+        "-map", "1:a:0",
+        "-shortest",
+        "-y", outputPath,
+      ];
     } else {
-      command = `ffmpeg -i "${videoPath}" -i "${audioPath}" -c:v copy -c:a aac -filter_complex "[0:a][1:a]amerge=inputs=2[a]" -map 0:v -map "[a]" -shortest -y "${outputPath}"`;
+      args = [
+        "-i", videoPath,
+        "-i", audioPath,
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-filter_complex", "[0:a][1:a]amerge=inputs=2[a]",
+        "-map", "0:v",
+        "-map", "[a]",
+        "-shortest",
+        "-y", outputPath,
+      ];
     }
 
-    await execFFmpeg(command);
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
@@ -482,13 +559,21 @@ async function extractFrames(
 
     await ensureDir(outputDir);
 
-    const startArg = startTime ? `-ss ${parseTimeString(startTime)}` : "";
-    const durationArg = duration ? `-t ${parseTimeString(duration)}` : "";
-    const fpsArg = fps ? `-vf fps=${fps}` : "";
     const outputPattern = join(outputDir, `frame_%04d.${format}`);
 
-    const command = `ffmpeg -i "${inputPath}" ${startArg} ${durationArg} ${fpsArg} "${outputPattern}"`;
-    await execFFmpeg(command);
+    const args = ["-i", inputPath];
+    if (startTime) {
+      args.push("-ss", parseTimeString(startTime));
+    }
+    if (duration) {
+      args.push("-t", parseTimeString(duration));
+    }
+    if (fps) {
+      args.push("-vf", `fps=${fps}`);
+    }
+    args.push(outputPattern);
+
+    await execFFmpeg(args);
 
     return JSON.stringify({
       success: true,
@@ -520,12 +605,14 @@ async function createGif(
 
     await ensureDir(dirname(outputPath));
 
-    const startArg = startTime ? `-ss ${parseTimeString(startTime)}` : "";
-    const durationArg = `-t ${parseTimeString(duration)}`;
     const filters = `fps=${fps},scale=${width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`;
 
-    const command = `ffmpeg -i "${inputPath}" ${startArg} ${durationArg} -vf "${filters}" -y "${outputPath}"`;
-    await execFFmpeg(command);
+    const args = ["-i", inputPath];
+    if (startTime) {
+      args.push("-ss", parseTimeString(startTime));
+    }
+    args.push("-t", parseTimeString(duration), "-vf", filters, "-y", outputPath);
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
@@ -579,8 +666,14 @@ async function addWatermark(
       ? `[1:v]${alphaFilter}[wm];[0:v][wm]overlay=${overlay}`
       : `overlay=${overlay}`;
 
-    const command = `ffmpeg -i "${inputPath}" -i "${watermarkPath}" -filter_complex "${filter}" -c:a copy -y "${outputPath}"`;
-    await execFFmpeg(command);
+    const args = [
+      "-i", inputPath,
+      "-i", watermarkPath,
+      "-filter_complex", filter,
+      "-c:a", "copy",
+      "-y", outputPath,
+    ];
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
@@ -620,9 +713,14 @@ async function adjustSpeed(
     const videoSpeed = 1 / speed;
     const audioSpeed = speed;
     const filter = `[0:v]setpts=${videoSpeed}*PTS[v];[0:a]atempo=${audioSpeed}[a]`;
-
-    const command = `ffmpeg -i "${inputPath}" -filter_complex "${filter}" -map "[v]" -map "[a]" -y "${outputPath}"`;
-    await execFFmpeg(command);
+    const args = [
+      "-i", inputPath,
+      "-filter_complex", filter,
+      "-map", "[v]",
+      "-map", "[a]",
+      "-y", outputPath,
+    ];
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
@@ -663,8 +761,13 @@ async function rotateVideo(
       default: transpose = "transpose=1";
     }
 
-    const command = `ffmpeg -i "${inputPath}" -vf "${transpose}" -c:a copy -y "${outputPath}"`;
-    await execFFmpeg(command);
+    const args = [
+      "-i", inputPath,
+      "-vf", transpose,
+      "-c:a", "copy",
+      "-y", outputPath,
+    ];
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
@@ -699,17 +802,29 @@ async function addSubtitles(
 
     await ensureDir(dirname(outputPath));
 
-    let command: string;
+    let args: string[];
     if (burnIn) {
       // Burn subtitles into video
       const escapedPath = subtitlePath.replace(/\\/g, "/").replace(/:/g, "\\\\:");
-      command = `ffmpeg -i "${inputPath}" -vf "subtitles='${escapedPath}'" -c:a copy -y "${outputPath}"`;
+      const filter = `subtitles='${escapedPath}'`;
+      args = [
+        "-i", inputPath,
+        "-vf", filter,
+        "-c:a", "copy",
+        "-y", outputPath,
+      ];
     } else {
       // Embed subtitles as separate stream
-      command = `ffmpeg -i "${inputPath}" -i "${subtitlePath}" -c copy -c:s mov_text -y "${outputPath}"`;
+      args = [
+        "-i", inputPath,
+        "-i", subtitlePath,
+        "-c", "copy",
+        "-c:s", "mov_text",
+        "-y", outputPath,
+      ];
     }
 
-    await execFFmpeg(command);
+    await execFFmpeg(args);
 
     const stats = await stat(outputPath);
 
