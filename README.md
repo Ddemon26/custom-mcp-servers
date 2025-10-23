@@ -65,19 +65,19 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/browser-mcp/src/server.js"]
        },
-       "curl": {
+       "curl-mcp": {
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/curl/src/server.js"]
        },
-       "dice-roll": {
+       "diceroll-mcp": {
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/dice-roll/src/server.js"]
        },
-       "easy-view": {
+       "easyview-mcp": {
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/easy-view/src/server.js"]
        },
-       "file-download": {
+       "filedownload-mcp": {
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/file-download/src/server.js"]
        },
@@ -85,7 +85,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/ffmpeg-mcp/src/server.js"]
        },
-       "yt-dlp-mcp": {
+       "ytdlp-mcp": {
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/yt-dlp-mcp/src/server.js"]
        },
@@ -109,7 +109,7 @@ All servers speak MCP over stdio. You typically register them in your client's c
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/osrs-lookup/src/server.js"]
        },
-       "time": {
+       "time-mcp": {
          "command": "node",
          "args": ["/your/path/to/custom-mcp-servers/time/src/server.js"]
        }
