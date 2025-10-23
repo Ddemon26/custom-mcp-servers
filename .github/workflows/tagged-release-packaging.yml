@@ -25,23 +25,23 @@ jobs:
             browser-mcp/package-lock.json
             dotnet-mcp/package-lock.json
             git-mcp/package-lock.json
-            curl/package-lock.json
-            dice-roll/package-lock.json
-            easy-view/package-lock.json
-            file-download/package-lock.json
+            curl-mcp/package-lock.json
+            diceroll-mcp/package-lock.json
+            easyview-mcp/package-lock.json
+            filedownload-mcp/package-lock.json
             ffmpeg-mcp/package-lock.json
             html-mcp/package-lock.json
-            yt-dlp-mcp/package-lock.json
+            ytdlp-mcp/package-lock.json
             imagemagick-mcp/package-lock.json
             json-mcp/package-lock.json
             markdown-mcp/package-lock.json
-            osrs-lookup/package-lock.json
-            time/package-lock.json
+            osrslookup-mcp/package-lock.json
+            time-mcp/package-lock.json
 
       - name: Install dependencies and build servers
         run: |
           set -eo pipefail
-          for dir in archive-mcp browser-mcp curl dice-roll easy-view file-download ffmpeg-mcp html-mcp imagemagick-mcp dotnet-mcp git-mcp json-mcp markdown-mcp osrs-lookup time yt-dlp-mcp; do
+          for dir in archive-mcp browser-mcp curl-mcp diceroll-mcp easyview-mcp filedownload-mcp ffmpeg-mcp html-mcp imagemagick-mcp dotnet-mcp git-mcp json-mcp markdown-mcp osrslookup-mcp time-mcp ytdlp-mcp; do
             echo "Installing dependencies for $dir"
             (cd "$dir" && npm ci)
             echo "Building $dir"
@@ -53,7 +53,7 @@ jobs:
           set -eo pipefail
           TAG_NAME="${GITHUB_REF#refs/tags/}"
           mkdir -p artifacts
-          for dir in archive-mcp browser-mcp curl dice-roll easy-view file-download ffmpeg-mcp html-mcp imagemagick-mcp dotnet-mcp git-mcp json-mcp markdown-mcp osrs-lookup time yt-dlp-mcp; do
+          for dir in archive-mcp browser-mcp curl-mcp diceroll-mcp easyview-mcp filedownload-mcp ffmpeg-mcp html-mcp imagemagick-mcp dotnet-mcp git-mcp json-mcp markdown-mcp osrslookup-mcp time-mcp ytdlp-mcp; do
             echo "Cleaning $dir before packaging"
             rm -rf "$dir/node_modules"
             archive="artifacts/${dir}-${TAG_NAME}.zip"
