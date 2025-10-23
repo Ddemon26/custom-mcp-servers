@@ -1,6 +1,6 @@
 import { stat } from "fs/promises";
 import { dirname } from "path";
-import { execAsync, pathExists, ensureDir, formatBytes } from "../utils.js";
+import { runImageMagickCommand, pathExists, ensureDir, formatBytes } from "../utils.js";
 
 /**
  * Convert an image to a different format
@@ -18,10 +18,13 @@ export async function convertFormat(
 
     await ensureDir(dirname(outputPath));
 
-    const qualityArg = quality ? `-quality ${quality}` : "";
-    const command = `magick convert "${inputPath}" ${qualityArg} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      ...(quality ? ["-quality", String(quality)] : []),
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -59,9 +62,14 @@ export async function adjustQuality(
 
     await ensureDir(dirname(outputPath));
 
-    const command = `magick convert "${inputPath}" -quality ${quality} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-quality",
+      String(quality),
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const inputStats = await stat(inputPath);
     const outputStats = await stat(outputPath);

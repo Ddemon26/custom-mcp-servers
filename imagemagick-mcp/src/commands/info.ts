@@ -1,4 +1,4 @@
-import { execAsync, pathExists } from "../utils.js";
+import { runImageMagickCommand, pathExists } from "../utils.js";
 
 /**
  * Get detailed image information using ImageMagick's identify command
@@ -9,8 +9,7 @@ export async function getImageInfo(inputPath: string): Promise<string> {
       throw new Error(`Input file not found: ${inputPath}`);
     }
 
-    const command = `magick identify -verbose "${inputPath}"`;
-    const { stdout, stderr } = await execAsync(command);
+    const { stdout } = await runImageMagickCommand("identify", ["-verbose", inputPath]);
 
     // Parse the verbose output
     const lines = stdout.split("\n");

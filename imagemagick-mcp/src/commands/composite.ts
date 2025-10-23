@@ -1,6 +1,6 @@
 import { stat } from "fs/promises";
 import { dirname, basename, join } from "path";
-import { execAsync, pathExists, ensureDir, formatBytes } from "../utils.js";
+import { runImageMagickCommand, pathExists, ensureDir, formatBytes } from "../utils.js";
 import { GRAVITY_MAP, WatermarkPosition } from "../types.js";
 
 /**
@@ -20,9 +20,16 @@ export async function createThumbnail(
 
     await ensureDir(dirname(outputPath));
 
-    const command = `magick convert "${inputPath}" -thumbnail ${width}x${height} -quality ${quality} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-thumbnail",
+      `${width}x${height}`,
+      "-quality",
+      String(quality),
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -64,9 +71,17 @@ export async function addWatermark(
     const gravity = GRAVITY_MAP[position.toLowerCase()] || "SouthEast";
     const opacityArg = Math.round(opacity * 100);
 
-    const command = `magick composite -gravity ${gravity} -dissolve ${opacityArg} "${watermarkPath}" "${inputPath}" "${outputPath}"`;
+    const magickArgs = [
+      "-gravity",
+      gravity,
+      "-dissolve",
+      String(opacityArg),
+      watermarkPath,
+      inputPath,
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("composite", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -121,9 +136,13 @@ export async function batchResize(
           geometry = `x${height}`;
         }
 
-        const qualityArg = quality ? `-quality ${quality}` : "";
-        const command = `magick convert "${inputPath}" -resize ${geometry} ${qualityArg} "${outputPath}"`;
-        await execAsync(command);
+        const convertArgs = [
+          inputPath,
+          ...(geometry ? ["-resize", geometry] : []),
+          ...(quality ? ["-quality", String(quality)] : []),
+          outputPath,
+        ];
+        await runImageMagickCommand("convert", convertArgs);
 
         const stats = await stat(outputPath);
         results.push({
