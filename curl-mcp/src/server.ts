@@ -11,11 +11,8 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
-
-const execAsync = promisify(exec);
 
 interface CurlResponse {
   id: string;
@@ -59,6 +56,38 @@ class CurlServer {
 
     this.setupToolHandlers();
     this.setupErrorHandling();
+  }
+
+  private async runCurlCommand(args: string[]): Promise<{ stdout: string; stderr: string }> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('curl', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk.toString('utf8');
+      });
+
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk.toString('utf8');
+      });
+
+      child.on('error', (error) => {
+        reject(error);
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({ stdout, stderr });
+        } else {
+          const error: any = new Error(`curl exited with code ${code}`);
+          error.stdout = stdout;
+          error.stderr = stderr;
+          error.code = code;
+          reject(error);
+        }
+      });
+    });
   }
 
   private setupErrorHandling(): void {
@@ -266,46 +295,41 @@ class CurlServer {
       throw new Error('Valid URL is required');
     }
 
-    // Build curl command
-    let curlCommand = 'curl';
-
-    // Add silent mode to prevent progress meter
-    curlCommand += ' -s';
-
-    // Include headers in output
-    curlCommand += ' -i';
-
-    // Add method
-    curlCommand += ` -X ${method.toUpperCase()}`;
-
-    // Add headers
-    if (headers && typeof headers === 'object') {
-      for (const [key, value] of Object.entries(headers)) {
-        curlCommand += ` -H "${key}: ${value}"`;
-      }
-    }
-
-    // Add data
-    if (data && (method.toUpperCase() === 'POST' || method.toUpperCase() === 'PUT' || method.toUpperCase() === 'PATCH')) {
-      curlCommand += ` -d '${data.replace(/'/g, "'\"'\"'")}'`;
-    }
-
-    // Add timeout
-    curlCommand += ` --max-time ${timeout}`;
-
-    // Add redirect handling
-    curlCommand += follow_redirects ? ' -L' : ' --max-redirs 0';
-
-    // Add insecure flag
-    if (insecure) {
-      curlCommand += ' -k';
-    }
-
-    // Add URL (always last)
-    curlCommand += ` "${url}"`;
-
     try {
-      const { stdout, stderr } = await execAsync(curlCommand);
+      const args: string[] = ['-s', '-i', '-X', method.toUpperCase()];
+
+      if (headers && typeof headers === 'object') {
+        for (const [key, value] of Object.entries(headers)) {
+          if (typeof value === 'string') {
+            args.push('-H', `${key}: ${value}`);
+          }
+        }
+      }
+
+      if (
+        data &&
+        typeof data === 'string' &&
+        ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())
+      ) {
+        args.push('-d', data);
+      }
+
+      const safeTimeout = Number.isFinite(timeout) && timeout > 0 ? timeout : 30;
+      args.push('--max-time', String(safeTimeout));
+
+      if (follow_redirects) {
+        args.push('-L');
+      } else {
+        args.push('--max-redirs', '0');
+      }
+
+      if (insecure) {
+        args.push('-k');
+      }
+
+      args.push(url);
+
+      const { stdout, stderr } = await this.runCurlCommand(args);
 
       // Parse response
       const response = this.parseCurlResponse(stdout, url, method);

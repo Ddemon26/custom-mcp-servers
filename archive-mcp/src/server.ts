@@ -220,7 +220,7 @@ async function listContents(archivePath: string): Promise<string> {
       });
     } else if (ext.endsWith('.zip')) {
       // For zip, we need to extract to list (decompress limitation)
-      const entries = await decompress(archivePath, { strip: 0 });
+      const entries = await decompress(archivePath, undefined, { strip: 0 });
       entries.forEach(entry => {
         files.push(entry.path);
       });

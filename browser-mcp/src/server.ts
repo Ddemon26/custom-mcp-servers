@@ -18,7 +18,6 @@ const BrowserTools = {
   GET_TEXT: "get_text",
   CLICK: "click",
   TYPE: "type",
-  EVALUATE: "evaluate",
   WAIT_FOR_SELECTOR: "wait_for_selector",
   PDF: "pdf",
   GET_COOKIES: "get_cookies",
@@ -211,20 +210,6 @@ async function typeText(
     }, null, 2);
   } catch (error) {
     throw new Error(`Typing failed: ${error}`);
-  }
-}
-
-async function evaluateScript(script: string): Promise<any> {
-  try {
-    const page = await getPage();
-    const result = await page.evaluate((script) => {
-      // eslint-disable-next-line no-eval
-      return eval(script);
-    }, script);
-
-    return JSON.stringify(result, null, 2);
-  } catch (error) {
-    throw new Error(`Script evaluation failed: ${error}`);
   }
 }
 
@@ -445,17 +430,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: BrowserTools.EVALUATE,
-        description: "Execute JavaScript in the page context",
-        inputSchema: {
-          type: "object",
-          properties: {
-            script: { type: "string", description: "JavaScript code to execute" },
-          },
-          required: ["script"],
-        },
-      },
-      {
         name: BrowserTools.WAIT_FOR_SELECTOR,
         description: "Wait for an element to appear on the page",
         inputSchema: {
@@ -496,8 +470,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             cookies: {
-              type: "string",
-              description: "JSON string of cookie objects array with name, value, domain, path, etc."
+              type: "array",
+              description: "Array of cookie objects (matches Puppeteer CookieParam)",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  value: { type: "string" },
+                  url: { type: "string" },
+                  domain: { type: "string" },
+                  path: { type: "string" },
+                  expires: { type: "number" },
+                  httpOnly: { type: "boolean" },
+                  secure: { type: "boolean" },
+                  sameSite: { type: "string", enum: ["Strict", "Lax", "None"] },
+                },
+                required: ["name", "value"],
+                additionalProperties: true,
+              },
             },
           },
           required: ["cookies"],
@@ -510,8 +500,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             selectors: {
-              type: "string",
-              description: "JSON object mapping field names to CSS selectors"
+              type: "object",
+              description: "Mapping of result keys to CSS selectors",
+              additionalProperties: { type: "string" }
             },
           },
           required: ["selectors"],
@@ -524,8 +515,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             fields: {
-              type: "string",
-              description: "JSON object mapping selectors to values"
+              type: "object",
+              description: "Mapping of CSS selectors to values to type into inputs",
+              additionalProperties: { type: "string" }
             },
             submitSelector: { type: "string", description: "CSS selector of submit button (optional)" },
           },
@@ -607,14 +599,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: "text", text: result }] };
       }
 
-      case BrowserTools.EVALUATE: {
-        if (typeof args.script !== "string") {
-          throw new McpError(ErrorCode.InvalidParams, "script must be a string");
-        }
-        const result = await evaluateScript(args.script);
-        return { content: [{ type: "text", text: result }] };
-      }
-
       case BrowserTools.WAIT_FOR_SELECTOR: {
         if (typeof args.selector !== "string") {
           throw new McpError(ErrorCode.InvalidParams, "selector must be a string");
@@ -640,30 +624,53 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case BrowserTools.SET_COOKIES: {
-        if (typeof args.cookies !== "string") {
-          throw new McpError(ErrorCode.InvalidParams, "cookies must be a JSON string");
+        let cookiesInput = args.cookies;
+        if (typeof cookiesInput === "string") {
+          try {
+            cookiesInput = JSON.parse(cookiesInput);
+          } catch (error) {
+            throw new McpError(ErrorCode.InvalidParams, "cookies must be valid JSON");
+          }
         }
-        const cookies = JSON.parse(args.cookies);
-        const result = await setCookies(cookies);
+
+        if (!Array.isArray(cookiesInput)) {
+          throw new McpError(ErrorCode.InvalidParams, "cookies must be an array of cookie objects");
+        }
+
+        const result = await setCookies(cookiesInput);
         return { content: [{ type: "text", text: result }] };
       }
 
       case BrowserTools.EXTRACT_DATA: {
-        if (typeof args.selectors !== "string") {
-          throw new McpError(ErrorCode.InvalidParams, "selectors must be a JSON string");
+        let selectorsInput = args.selectors;
+        if (typeof selectorsInput === "string") {
+          try {
+            selectorsInput = JSON.parse(selectorsInput);
+          } catch {
+            throw new McpError(ErrorCode.InvalidParams, "selectors must be valid JSON");
+          }
         }
-        const selectors = JSON.parse(args.selectors);
-        const result = await extractData(selectors);
+        if (!selectorsInput || typeof selectorsInput !== "object" || Array.isArray(selectorsInput)) {
+          throw new McpError(ErrorCode.InvalidParams, "selectors must be an object mapping keys to CSS selectors");
+        }
+        const result = await extractData(selectorsInput as Record<string, string>);
         return { content: [{ type: "text", text: result }] };
       }
 
       case BrowserTools.FILL_FORM: {
-        if (typeof args.fields !== "string") {
-          throw new McpError(ErrorCode.InvalidParams, "fields must be a JSON string");
+        let fieldsInput = args.fields;
+        if (typeof fieldsInput === "string") {
+          try {
+            fieldsInput = JSON.parse(fieldsInput);
+          } catch {
+            throw new McpError(ErrorCode.InvalidParams, "fields must be valid JSON");
+          }
         }
-        const fields = JSON.parse(args.fields);
+        if (!fieldsInput || typeof fieldsInput !== "object" || Array.isArray(fieldsInput)) {
+          throw new McpError(ErrorCode.InvalidParams, "fields must be an object mapping selectors to values");
+        }
         const submitSelector = typeof args.submitSelector === "string" ? args.submitSelector : undefined;
-        const result = await fillForm(fields, submitSelector);
+        const result = await fillForm(fieldsInput as Record<string, string>, submitSelector);
         return { content: [{ type: "text", text: result }] };
       }
 

@@ -1,6 +1,6 @@
 import { stat } from "fs/promises";
 import { dirname } from "path";
-import { execAsync, pathExists, ensureDir, formatBytes } from "../utils.js";
+import { runImageMagickCommand, pathExists, ensureDir, formatBytes } from "../utils.js";
 
 /**
  * Adjust image brightness
@@ -17,9 +17,14 @@ export async function adjustBrightness(
 
     await ensureDir(dirname(outputPath));
 
-    const command = `magick convert "${inputPath}" -brightness-contrast ${adjustment}x0 "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-brightness-contrast",
+      `${adjustment}x0`,
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -52,9 +57,14 @@ export async function adjustContrast(
 
     await ensureDir(dirname(outputPath));
 
-    const command = `magick convert "${inputPath}" -brightness-contrast 0x${adjustment} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-brightness-contrast",
+      `0x${adjustment}`,
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -87,9 +97,14 @@ export async function adjustSaturation(
 
     await ensureDir(dirname(outputPath));
 
-    const command = `magick convert "${inputPath}" -modulate 100,${adjustment} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-modulate",
+      `100,${adjustment}`,
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -123,9 +138,14 @@ export async function blurImage(
 
     await ensureDir(dirname(outputPath));
 
-    const command = `magick convert "${inputPath}" -blur ${radius}x${sigma} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-blur",
+      `${radius}x${sigma}`,
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -160,9 +180,14 @@ export async function sharpenImage(
 
     await ensureDir(dirname(outputPath));
 
-    const command = `magick convert "${inputPath}" -sharpen ${radius}x${sigma} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-sharpen",
+      `${radius}x${sigma}`,
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 

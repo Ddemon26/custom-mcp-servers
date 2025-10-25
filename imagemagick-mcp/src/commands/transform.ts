@@ -1,6 +1,6 @@
 import { stat } from "fs/promises";
 import { dirname } from "path";
-import { execAsync, pathExists, ensureDir, formatBytes } from "../utils.js";
+import { runImageMagickCommand, pathExists, ensureDir, formatBytes } from "../utils.js";
 import { FlipDirection } from "../types.js";
 
 /**
@@ -32,10 +32,15 @@ export async function resizeImage(
       throw new Error("Either width or height must be specified");
     }
 
-    const qualityArg = quality ? `-quality ${quality}` : "";
-    const command = `magick convert "${inputPath}" -resize ${geometry} ${qualityArg} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-resize",
+      geometry,
+      ...(quality ? ["-quality", String(quality)] : []),
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -74,9 +79,14 @@ export async function cropImage(
     await ensureDir(dirname(outputPath));
 
     const geometry = `${width}x${height}+${x}+${y}`;
-    const command = `magick convert "${inputPath}" -crop ${geometry} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-crop",
+      geometry,
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -109,9 +119,14 @@ export async function rotateImage(
 
     await ensureDir(dirname(outputPath));
 
-    const command = `magick convert "${inputPath}" -rotate ${degrees} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      "-rotate",
+      String(degrees),
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
@@ -145,9 +160,13 @@ export async function flipImage(
     await ensureDir(dirname(outputPath));
 
     const flipArg = direction === "horizontal" ? "-flop" : "-flip";
-    const command = `magick convert "${inputPath}" ${flipArg} "${outputPath}"`;
+    const magickArgs = [
+      inputPath,
+      flipArg,
+      outputPath,
+    ];
 
-    await execAsync(command);
+    await runImageMagickCommand("convert", magickArgs);
 
     const stats = await stat(outputPath);
 
