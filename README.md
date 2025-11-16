@@ -1,3 +1,5 @@
+[![](https://badge.mcpx.dev?status=on 'MCP Enabled')](https://modelcontextprotocol.io/introduction)
+
 # Custom MCP Servers
 
 A collection of production-ready Model Context Protocol (MCP) servers written in TypeScript to extend AI coding assistants with reproducible tooling. Every server communicates over stdio and can be registered with any MCP-compliant client (Claude Desktop, CLI agents, IDE integrations) to add focused capabilities without leaking sensitive workspace data.
